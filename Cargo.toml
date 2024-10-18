@@ -1,0 +1,17 @@
+[package]
+name = "bakery"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+biscotti = "^0.3.4"
+serde_json = "^1.0"
+serde = { version = "1.0.208", features = ["derive"] }
+anyhow = "^1.0.86"
+thiserror = "^1.0.64"
+actix-web = "^4.9"
+actix-utils = "^3.0.1"
+
+[dev-dependencies]
+external_crate = { package = "bakery", version = "0.1.0" }
+actix-web = "^4.9"
