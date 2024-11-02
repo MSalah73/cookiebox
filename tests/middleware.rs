@@ -45,6 +45,11 @@ async fn get_cookie(cookie: CookieCollection<'_>) -> impl Responder {
     assert_eq!(cookie, "id");
     "Logged out"
 }
+async fn get_all_cookie(cookie: CookieCollection<'_>) -> impl Responder {
+    let cookie = cookie.0.get_all().unwrap();
+    assert_eq!(cookie, vec!["id", "id2"]);
+    "Logged out"
+}
 async fn remove_cookie(cookie: CookieCollection<'_>) -> impl Responder {
     cookie.0.remove();
     "Logged out"
@@ -60,10 +65,12 @@ async fn cookie_storage() -> std::io::Result<()> {
             )
             .route("/register", web::post().to(register_cookie))
             .route("/get", web::post().to(get_cookie))
+            .route("/get-all", web::post().to(get_all_cookie))
             .route("/remove", web::post().to(remove_cookie)),
     )
     .await;
 
+    // registering cookies to the browser
     let request = test::TestRequest::post().uri("/register").to_request();
     let response = test::call_service(&app, request).await;
     let cookie_header = response.headers().get(actix_web::http::header::SET_COOKIE)
@@ -73,14 +80,17 @@ async fn cookie_storage() -> std::io::Result<()> {
 
     assert_eq!(cookie_header, "Type%20A=%22id%22; HttpOnly; SameSite=Lax");
 
+    // getting back cookies from the browser
     let cookie_header = "Type%20A=%22id%22";
     let request = test::TestRequest::post().insert_header((actix_web::http::header::COOKIE, cookie_header)).uri("/get").to_request();
     let response = test::call_service(&app, request).await;
-    let cookie_header = response.headers().get(actix_web::http::header::SET_COOKIE)
-    .unwrap()
-    .to_str()
-    .unwrap();
 
+    // getting back a list of cookies  with same name from the browser
+    let cookie_header = "Type%20A=%22id%22; Type%20A=%22id2%22;";
+    let request = test::TestRequest::post().insert_header((actix_web::http::header::COOKIE, cookie_header)).uri("/get-all").to_request();
+    let response = test::call_service(&app, request).await;
+
+    // remove cookies from the user browser
     let request = test::TestRequest::post().uri("/remove").to_request();
     let response = test::call_service(&app, request).await;
     let cookie_header = response.headers().get(actix_web::http::header::SET_COOKIE)
@@ -89,11 +99,6 @@ async fn cookie_storage() -> std::io::Result<()> {
     .unwrap();
 
     assert_eq!(cookie_header, "Type%20A=; Expires=Thu, 01 Jan 1970 00:00:00 GMT");
-    // assert_eq!(session_cookie.path().unwrap(), "/");
-    // assert!(session_cookie.secure().is_none());
-    // assert!(session_cookie.http_only().unwrap());
-    // assert!(session_cookie.max_age().is_none());
-    // assert!(session_cookie.domain().is_none());
 
     Ok(())
 }

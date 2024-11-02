@@ -2,7 +2,7 @@ use actix_web::{
     dev::{forward_ready, ResponseHead, Service, ServiceRequest, ServiceResponse, Transform}, http::header::{HeaderValue, SET_COOKIE}, HttpMessage
 };
 use anyhow::anyhow;
-use biscotti::Processor;
+use biscotti::{errors::ProcessIncomingError, Processor, RequestCookie};
 use std::{future::Future, pin::Pin, rc::Rc};
 use actix_utils::future::{ready, Ready};
 
@@ -71,6 +71,7 @@ where
 
         Box::pin(async move {
             
+            //clone storage is cheap, since we are only coping the rc
             extract_cookies(&req, &processor, storage.clone()).map_err(e500)?;
 
             req.extensions_mut().insert(storage.clone());
@@ -84,6 +85,9 @@ where
     }
 }
 
+// Currently, the parse header methods and process_incoming method does not support returning a RequestCookie with owned
+// name and value only borrowed. for the time being, I have reconstructed the parse header method to do just that until proper
+// support in added to the biscotti crate.  
 fn extract_cookies(req: &ServiceRequest, processor: &Processor, storage: Storage) -> Result<(), anyhow::Error> 
 {
     let cookie_header = req.headers().get(actix_web::http::header::COOKIE);
@@ -95,9 +99,37 @@ fn extract_cookies(req: &ServiceRequest, processor: &Processor, storage: Storage
         None => return Ok(())
     };
 
-    storage.request_storage.borrow_mut().extend_from_header(cookie_header, processor).map_err(|e| {
-        anyhow!("Failed to parse cookie header: {}", e)
-    })?;
+    for cookie in cookie_header.split(';') {
+        if cookie.chars().all(char::is_whitespace) {
+            continue;
+        }
+
+        let (name, value) = match cookie.split_once('=') {
+            Some((name, value)) => (name.trim(), value.trim()),
+            None => {
+                return Err(anyhow!("Expected a name-value pair, but no `=` was found in `{}`", cookie.to_string()));
+            }
+        };
+
+        if name.is_empty() {
+            return Err(anyhow!("The name of a cookie cannot be empty, but found an empty name with `{}` as value", value.to_string()));
+        }
+
+        let cookie = match processor.process_incoming(name, value) {
+            Ok(c) => c,
+            Err(e) => {
+                let t = match e {
+                    ProcessIncomingError::Crypto(e) => "an encrypted",
+                    ProcessIncomingError::Decoding(e) => "a singed",
+                    _ => unreachable!()
+                };
+                return Err(anyhow!("Failed to process `{}` as {t} request cookie", name));
+            }
+        };
+
+        let cookie = RequestCookie::new(cookie.name().to_owned(), cookie.value().to_owned());
+        storage.request_storage.borrow_mut().append(cookie);
+    }
 
     Ok(())
 }

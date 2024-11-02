@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use biscotti::{time::Duration, Expiration};
-use biscotti::{SameSite, ResponseCookie};
+use biscotti::{RemovalCookie, ResponseCookie, SameSite};
 
 pub struct Attributes<'c>{
     path: Option<Cow<'c,str>>,
@@ -11,6 +11,7 @@ pub struct Attributes<'c>{
     same_site: Option<SameSite>,
     max_age: Option<Duration>,
     expires: Option<Expiration>,
+    permanent: bool,
 }
 impl<'c> Attributes<'c> {
 
@@ -24,6 +25,7 @@ impl<'c> Attributes<'c> {
            partitioned: None,
            max_age:None,
            expires: None,
+           permanent: false
        }
     }
     #[inline]
@@ -77,6 +79,7 @@ impl Default for Attributes<'_> {
            partitioned: None,
            max_age:None,
            expires: None,
+           permanent: false
        }
    }
 }
@@ -93,14 +96,33 @@ impl<'c> AttributesSetter<'c> for ResponseCookie<'c> {
         if let Some(domain) = &attributes.domain {
             self = self.set_domain(domain.clone())
         }
+
+        if attributes.permanent {
+            self = self.make_permanent()
+        } else {
+            self = self.set_max_age(attributes.max_age)
+        }
+        
         if let Some(expires) = attributes.expires {
             self = self.set_expires(expires)
         }
+
         self
             .set_secure(attributes.secure)
             .set_http_only(attributes.http_only)
             .set_same_site(attributes.same_site)
-            .set_max_age(attributes.max_age)
             .set_partitioned(attributes.partitioned)
    } 
+}
+
+impl<'c> AttributesSetter<'c> for RemovalCookie<'c> {
+   fn set_attributes(mut self, attributes: &Attributes<'c>) -> Self {
+        if let Some(path) = &attributes.path {
+            self = self.set_path(path.clone())
+        }
+        if let Some(domain) = &attributes.domain {
+            self = self.set_domain(domain.clone())
+        }
+        self
+    }
 }

@@ -64,13 +64,11 @@ fn main() {
     let cookieA = Cookie::<TypeA>::new(&storage);
     let mut cookieB = Cookie::<TypeB>::new(&storage);
     let cookieC = Cookie::<TypeC>::new(&storage);
-    cookieB.set_path("Owned");
-    cookieB.set_path("S".to_string());
+    cookieB.set_path("/custom-path");
 
-    cookieA.insert(GetType{ name: "Hi".to_string()});
-    cookieB.insert("HIIIII".to_string());
+    cookieA.insert(GetType{ name: "GetTypeStruct - member name's value".to_string()});
+    cookieB.insert("Value for cookie b".to_string());
     let a_data = cookieA.get().map_err(|e| print!("{}\n",e));
-    cookieB.insert("HI".to_string());
+    cookieB.insert("Value for cookie b - the second time".to_string());
     print!("{:?}",a_data);
-    //cookieC.get();
 }
