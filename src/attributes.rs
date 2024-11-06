@@ -67,6 +67,11 @@ impl<'c> Attributes<'c> {
         self.partitioned = value.into();
         self
     }
+    #[inline]
+    pub fn permanent(mut self, value: bool) -> Self {
+        self.permanent = value;
+        self
+    }
 }
 impl Default for Attributes<'_> {
    fn default() -> Self {
@@ -100,12 +105,13 @@ impl<'c> AttributesSetter<'c> for ResponseCookie<'c> {
         if attributes.permanent {
             self = self.make_permanent()
         } else {
-            self = self.set_max_age(attributes.max_age)
+            self = self.set_max_age(attributes.max_age);
+
+            if let Some(expires) = attributes.expires {
+                self = self.set_expires(expires)
+            }
         }
         
-        if let Some(expires) = attributes.expires {
-            self = self.set_expires(expires)
-        }
 
         self
             .set_secure(attributes.secure)

@@ -1,5 +1,4 @@
 use std::any::type_name;
-use std::borrow::Cow;
 use biscotti::{RemovalCookie, ResponseCookie};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -98,21 +97,6 @@ impl<'c,T: WriteConfig> Cookie<'c, T> {
 
         self.storage.response_storage.borrow_mut().insert(removal_cookie); 
     }
-    // Some time you might want to set dynamic path and domain
-    pub fn set_path<P: Into<Cow<'c, str>>>(&mut self, path: P) {
-        let attributes = match self.attributes.take() {
-            Some(attributes) => attributes.path(path),
-            None => T::attributes()
-        };
-        self.attributes = Some(attributes);
-    }
-    pub fn set_domain<D: Into<Cow<'c, str>>>(&mut self, domain: D) {
-        let attributes = match self.attributes.take() {
-            Some(attributes) => attributes.domain(domain),
-            None => T::attributes()
-        };
-        self.attributes = Some(attributes);
-    }
 }
 
 // Does name really need to be static - can it only live as long as the request?
@@ -138,19 +122,23 @@ pub trait ReadConfig {
 
 #[cfg(test)]
 mod tests {
-    use biscotti::{RequestCookie, ResponseCookie};
+    use biscotti::{time::{Date, Duration, Month, OffsetDateTime, Time}, Expiration, RequestCookie, ResponseCookie};
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use crate::{ReadConfig, WriteConfig, Attributes, Cookie, Storage, SameSite};
 
+    // Cookie types
     pub struct TypeA; 
     pub struct TypeB;
     pub struct TypeC;
+    pub struct TypeD;
 
     #[derive(Deserialize, Serialize, Debug, PartialEq)]
     pub struct GetType {
         name: String,
     }
+
+    // Cookie type impl
     impl TypeA {
         const NAME: &'static str = "type_a";
     }
@@ -160,6 +148,11 @@ mod tests {
     impl TypeC {
         const NAME: &'static str = "type_c";
     }
+    impl TypeD {
+        const NAME: &'static str = "type_d";
+    }
+    
+    // read and write for type a 
     impl WriteConfig for TypeA {
         type I = GetType;
 
@@ -167,6 +160,67 @@ mod tests {
     }
     impl ReadConfig for TypeA {
         type G = GetType;
+
+        const COOKIE_NAME: &'static str = Self::NAME;
+    }
+
+    // read and write for type b
+    impl WriteConfig for TypeB {
+        type I = (String, i32);
+
+        const COOKIE_NAME: &'static str = Self::NAME;
+
+        fn serialize(values: Self::I) -> serde_json::Value {
+            json!({
+                "name": format!("{} is {}", values.0, values.1)
+            })            
+        }
+    }
+    impl ReadConfig for TypeB {
+        type G = GetType;
+        const COOKIE_NAME: &'static str = Self::NAME;
+    }
+
+    // read and write for type c
+    impl WriteConfig for TypeC {
+        type I = GetType;
+
+        const COOKIE_NAME: &'static str = Self::NAME;
+
+        fn attributes<'c>() -> Attributes<'c> {
+            let date = Date::from_calendar_date(2024, Month::January,1).unwrap();
+            let time = Time::from_hms(0,0,0).unwrap();
+            let permanent = OffsetDateTime::new_utc(date, time);
+
+            Attributes::new()
+            .path("/some-path")
+            .domain("..example.com")
+            .same_site(SameSite::Lax)
+            .secure(true)
+            .http_only(true)
+            .partitioned(true)
+            .expires(Expiration::from(permanent))
+            .max_age(Duration::hours(10))
+        }
+    }
+    impl ReadConfig for TypeC {
+        type G = GetType;
+        const COOKIE_NAME: &'static str = Self::NAME;
+    }
+
+    // read and write for type d
+    impl WriteConfig for TypeD {
+        type I = GetType;
+
+        const COOKIE_NAME: &'static str = Self::NAME;
+
+        fn attributes<'c>() -> Attributes<'c> {
+            Attributes::new().permanent(true)
+        }
+    }
+    impl ReadConfig for TypeD {
+        type G = GetType;
+
         const COOKIE_NAME: &'static str = Self::NAME;
     }
 
@@ -178,9 +232,11 @@ mod tests {
         let get_type_value = GetType {name: "some value".to_string()};
 
         storage.request_storage.borrow_mut().append(incoming_cookie);
+
         let cookie_a = Cookie::<TypeA>::new(&storage);
 
         let typed_request_value = cookie_a.get();
+
         assert_eq!(typed_request_value.is_ok(), true);
         assert_eq!(typed_request_value, Ok(get_type_value));
     }
@@ -194,9 +250,11 @@ mod tests {
 
         storage.request_storage.borrow_mut().append(incoming_cookie_a);
         storage.request_storage.borrow_mut().append(incoming_cookie_b);
-        let cookie_a = Cookie::<TypeA>::new(&storage);
 
-        let typed_request_value = cookie_a.get_all();
+        let cookie = Cookie::<TypeA>::new(&storage);
+
+        let typed_request_value = cookie.get_all();
+
         assert_eq!(typed_request_value.is_ok(), true);
         assert_eq!(typed_request_value, Ok(get_type_values));
     }
@@ -204,17 +262,111 @@ mod tests {
     fn insert_cookie() {
         // Set up
         let storage = Storage::new();
-        let outgoing_cookie_a = ResponseCookie::new("type_a", r#"{ "name": "some value" }"#);
-        let outgoing_cookie_id_a = outgoing_cookie_a.id().set_path("/");
+        let outgoing_cookie = ResponseCookie::new("type_a", r#"{ "name": "some value" }"#);
+        let outgoing_cookie_id = outgoing_cookie.id().set_path("/");
         let get_type_value = GetType {name: "some value ".to_string()};
 
-        let cookie_a = Cookie::<TypeA>::new(&storage);
+        let cookie = Cookie::<TypeA>::new(&storage);
 
-        cookie_a.insert(get_type_value);
+        cookie.insert(get_type_value);
+
         let binding = storage.response_storage.borrow();
-        let cookie = binding.get(outgoing_cookie_id_a);
+        let response_cookie = binding.get(outgoing_cookie_id);
 
-        assert_eq!(cookie.is_some(), true);
-        assert_eq!(cookie.unwrap().name_value(), ("type_a", r#"{"name":"some value "}"#));
+        assert_eq!(response_cookie.is_some(), true);
+        assert_eq!(response_cookie.unwrap().name_value(), ("type_a", r#"{"name":"some value "}"#));
     }
+    #[test]
+    fn insert_cookie_with_custom_serialize_impl() {
+        // Set up
+        let storage = Storage::new();
+        let outgoing_cookie = ResponseCookie::new("type_b", r#"{ "name": "some value is 32" }"#);
+        let outgoing_cookie_id = outgoing_cookie.id().set_path("/");
+        let get_type_value = ("some value".to_string(), 32);
+
+        let cookie = Cookie::<TypeB>::new(&storage);
+
+        cookie.insert(get_type_value);
+
+        let binding = storage.response_storage.borrow();
+        let response_cookie = binding.get(outgoing_cookie_id);
+
+        assert_eq!(response_cookie.is_some(), true);
+        assert_eq!(response_cookie.unwrap().name_value(), ("type_b", r#"{"name":"some value is 32"}"#));
+    }
+    #[test]
+    fn insert_cookie_with_custom_attributes() {
+        // Set up
+        let storage = Storage::new();
+        let outgoing_cookie = ResponseCookie::new("type_c", r#"{ "name": "some value" }"#);
+        let outgoing_cookie_id = outgoing_cookie.id().set_path("/some-path").set_domain("..example.com");
+        let get_type_value = GetType {name: "some value".to_string()};
+
+        // expiration cookie set up 
+        let date = Date::from_calendar_date(2024, Month::January,1).unwrap();
+        let time = Time::from_hms(0,0,0).unwrap();
+        let expiration = OffsetDateTime::new_utc(date, time);
+
+        let cookie = Cookie::<TypeC>::new(&storage);
+
+        cookie.insert(get_type_value);
+
+        let binding = storage.response_storage.borrow();
+        let response_cookie = binding.get(outgoing_cookie_id);
+
+        assert_eq!(response_cookie.is_some(), true);
+        assert_eq!(response_cookie.unwrap().name_value(), ("type_c", r#"{"name":"some value"}"#));
+        assert_eq!(response_cookie.unwrap().path(), Some("/some-path"));
+        assert_eq!(response_cookie.unwrap().domain(), Some(".example.com"));
+        assert_eq!(response_cookie.unwrap().same_site(), Some(SameSite::Lax));
+        assert_eq!(response_cookie.unwrap().http_only(), Some(true));
+        assert_eq!(response_cookie.unwrap().secure(), Some(true));
+        assert_eq!(response_cookie.unwrap().partitioned(), Some(true));
+        assert_eq!(response_cookie.unwrap().expires(), Some(Expiration::from(expiration)));
+        assert_eq!(response_cookie.unwrap().max_age(), Some(Duration::hours(10)));
+
+    }
+    #[test]
+    fn insert_cookie_with_permanent() {
+        // Set up
+        let storage = Storage::new();
+        let outgoing_cookie = ResponseCookie::new("type_d", r#"{ "name": "some value" }"#);
+        let outgoing_cookie_id = outgoing_cookie.id();
+        let get_type_value = GetType {name: "some value".to_string()};
+
+        let cookie = Cookie::<TypeD>::new(&storage);
+
+        cookie.insert(get_type_value);
+
+        let binding = storage.response_storage.borrow();
+        let response_cookie = binding.get(outgoing_cookie_id);
+
+        assert_eq!(response_cookie.is_some(), true);
+        assert_eq!(response_cookie.unwrap().name_value(), ("type_d", r#"{"name":"some value"}"#));
+        assert_eq!(response_cookie.unwrap().max_age(), Some(Duration::days(20 * 365)));
+    }
+    #[test]
+    fn remove_cookie() {
+        // Set up
+        let storage = Storage::new();
+        let outgoing_cookie = ResponseCookie::new("type_b", r#"{ "name": "some value is 32" }"#);
+        let outgoing_cookie_id = outgoing_cookie.id().set_path("/");
+
+        // removal cookie set up 
+        let date = Date::from_calendar_date(1970, Month::January,1).unwrap();
+        let time = Time::from_hms(0,0,0).unwrap();
+        let removal_date = OffsetDateTime::new_utc(date, time);
+
+        let cookie = Cookie::<TypeB>::new(&storage);
+
+        cookie.remove();
+
+        let binding = storage.response_storage.borrow();
+        let response_cookie = binding.get(outgoing_cookie_id);
+
+        assert_eq!(response_cookie.is_some(), true);
+        assert_eq!(response_cookie.unwrap().name_value(), ("type_b", ""));
+        assert_eq!(response_cookie.unwrap().expires().unwrap(), Expiration::from(removal_date));
+    }
+
 }
