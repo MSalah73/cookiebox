@@ -32,8 +32,8 @@ impl<'c, T> Cookie<'c, T>{
     }
 }
 
-impl<T: ReadConfig> Cookie<'_, T> {
-    pub fn get(&self) -> Result<T::G, BakeryError>
+impl<T: IncomingConfig> Cookie<'_, T> {
+    pub fn get(&self) -> Result<T::Get, BakeryError>
     {
         let data = &self
             .storage
@@ -44,11 +44,11 @@ impl<T: ReadConfig> Cookie<'_, T> {
         // Does it panic?  use clone
         // Closure - Implement response error to remove it - i think
         let data = serde_json::from_str(data.value())
-            .map_err(|_| BakeryError::Deserialization(data.value().to_string(), type_name::<T::G>().to_string()))?;
+            .map_err(|_| BakeryError::Deserialization(data.value().to_string(), type_name::<T::Get>().to_string()))?;
         Ok(data)
     }
 
-    pub fn get_all(&self) -> Result<Vec<T::G>, BakeryError>
+    pub fn get_all(&self) -> Result<Vec<T::Get>, BakeryError>
     {
         let data = &self
             .storage
@@ -62,15 +62,15 @@ impl<T: ReadConfig> Cookie<'_, T> {
 
         for value in data.values(){
             let data  = serde_json::from_str(value)
-                .map_err(|_| BakeryError::Deserialization(value.to_string(), type_name::<T::G>().to_string()))?;
+                .map_err(|_| BakeryError::Deserialization(value.to_string(), type_name::<T::Get>().to_string()))?;
             result.push(data);
         }
 
         Ok(result)
     }
 }
-impl<'c,T: WriteConfig> Cookie<'c, T> {
-    pub fn insert(&self, value: T::I)
+impl<'c,T: OutgoingConfig> Cookie<'c, T> {
+    pub fn insert(&self, value: T::Insert)
     {
         let data = T::serialize(value);
     
@@ -100,12 +100,12 @@ impl<'c,T: WriteConfig> Cookie<'c, T> {
 }
 
 // Does name really need to be static - can it only live as long as the request?
-pub trait WriteConfig {
-    type I: Serialize; 
+pub trait OutgoingConfig {
+    type Insert: Serialize; 
 
     const COOKIE_NAME: &'static str;
 
-    fn serialize(values: Self::I) -> Value {
+    fn serialize(values: Self::Insert) -> Value {
         json!(values)
     }
     
@@ -114,8 +114,8 @@ pub trait WriteConfig {
     }
 }
 
-pub trait ReadConfig {
-    type G: DeserializeOwned; 
+pub trait IncomingConfig {
+    type Get: DeserializeOwned; 
 
     const COOKIE_NAME: &'static str;
 }
@@ -125,7 +125,7 @@ mod tests {
     use biscotti::{time::{Date, Duration, Month, OffsetDateTime, Time}, Expiration, RequestCookie, ResponseCookie};
     use serde::{Deserialize, Serialize};
     use serde_json::json;
-    use crate::{ReadConfig, WriteConfig, Attributes, Cookie, Storage, SameSite};
+    use crate::{IncomingConfig, OutgoingConfig, Attributes, Cookie, Storage, SameSite};
 
     // Cookie types
     pub struct TypeA; 
@@ -153,37 +153,37 @@ mod tests {
     }
     
     // read and write for type a 
-    impl WriteConfig for TypeA {
-        type I = GetType;
+    impl OutgoingConfig for TypeA {
+        type Insert = GetType;
 
         const COOKIE_NAME: &'static str = Self::NAME;
     }
-    impl ReadConfig for TypeA {
-        type G = GetType;
+    impl IncomingConfig for TypeA {
+        type Get = GetType;
 
         const COOKIE_NAME: &'static str = Self::NAME;
     }
 
     // read and write for type b
-    impl WriteConfig for TypeB {
-        type I = (String, i32);
+    impl OutgoingConfig for TypeB {
+        type Insert = (String, i32);
 
         const COOKIE_NAME: &'static str = Self::NAME;
 
-        fn serialize(values: Self::I) -> serde_json::Value {
+        fn serialize(values: Self::Insert) -> serde_json::Value {
             json!({
                 "name": format!("{} is {}", values.0, values.1)
             })            
         }
     }
-    impl ReadConfig for TypeB {
-        type G = GetType;
+    impl IncomingConfig for TypeB {
+        type Get = GetType;
         const COOKIE_NAME: &'static str = Self::NAME;
     }
 
     // read and write for type c
-    impl WriteConfig for TypeC {
-        type I = GetType;
+    impl OutgoingConfig for TypeC {
+        type Insert = GetType;
 
         const COOKIE_NAME: &'static str = Self::NAME;
 
@@ -203,14 +203,14 @@ mod tests {
             .max_age(Duration::hours(10))
         }
     }
-    impl ReadConfig for TypeC {
-        type G = GetType;
+    impl IncomingConfig for TypeC {
+        type Get = GetType;
         const COOKIE_NAME: &'static str = Self::NAME;
     }
 
     // read and write for type d
-    impl WriteConfig for TypeD {
-        type I = GetType;
+    impl OutgoingConfig for TypeD {
+        type Insert = GetType;
 
         const COOKIE_NAME: &'static str = Self::NAME;
 
@@ -218,8 +218,8 @@ mod tests {
             Attributes::new().permanent(true)
         }
     }
-    impl ReadConfig for TypeD {
-        type G = GetType;
+    impl IncomingConfig for TypeD {
+        type Get = GetType;
 
         const COOKIE_NAME: &'static str = Self::NAME;
     }

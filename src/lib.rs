@@ -6,7 +6,7 @@ pub mod middleware;
 pub use biscotti::{SameSite, Expiration, Processor, ProcessorConfig};
 
 pub use self::{
-    cookies::{Cookie, ReadConfig, WriteConfig},
+    cookies::{Cookie, IncomingConfig, OutgoingConfig},
     attributes::Attributes,
     storage::Storage,
     middleware::CookieMiddleware,

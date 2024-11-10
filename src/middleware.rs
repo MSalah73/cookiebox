@@ -119,8 +119,8 @@ fn extract_cookies(req: &ServiceRequest, processor: &Processor, storage: Storage
             Ok(c) => c,
             Err(e) => {
                 let t = match e {
-                    ProcessIncomingError::Crypto(e) => "an encrypted",
-                    ProcessIncomingError::Decoding(e) => "a singed",
+                    ProcessIncomingError::Crypto(_) => "an encrypted",
+                    ProcessIncomingError::Decoding(_) => "a singed",
                     _ => unreachable!()
                 };
                 return Err(anyhow!("Failed to process `{}` as {t} request cookie", name));
