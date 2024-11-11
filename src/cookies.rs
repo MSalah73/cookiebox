@@ -6,6 +6,7 @@ use serde_json::{json, Value};
 use thiserror::Error;
 use crate::attributes::{Attributes, AttributesSetter};
 use crate::storage::Storage;
+use bakery_macros::cookie;
 
 #[derive(Error,Debug, PartialEq)]
 pub enum BakeryError{
@@ -100,10 +101,8 @@ impl<'c,T: OutgoingConfig> Cookie<'c, T> {
 }
 
 // Does name really need to be static - can it only live as long as the request?
-pub trait OutgoingConfig {
+pub trait OutgoingConfig: CookieName {
     type Insert: Serialize; 
-
-    const COOKIE_NAME: &'static str;
 
     fn serialize(values: Self::Insert) -> Value {
         json!(values)
@@ -114,9 +113,11 @@ pub trait OutgoingConfig {
     }
 }
 
-pub trait IncomingConfig {
+pub trait IncomingConfig: CookieName{
     type Get: DeserializeOwned; 
+}
 
+pub trait CookieName {
     const COOKIE_NAME: &'static str;
 }
 
@@ -126,11 +127,17 @@ mod tests {
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use crate::{IncomingConfig, OutgoingConfig, Attributes, Cookie, Storage, SameSite};
-
+    use bakery_macros::cookie;
+    use crate::cookies::CookieName;
+    
     // Cookie types
+    #[cookie(name = "type_a")]
     pub struct TypeA; 
+    #[cookie(name = "type_b")]
     pub struct TypeB;
+    #[cookie(name = "type_c")]
     pub struct TypeC;
+    #[cookie(name = "type_d")]
     pub struct TypeD;
 
     #[derive(Deserialize, Serialize, Debug, PartialEq)]
@@ -138,37 +145,17 @@ mod tests {
         name: String,
     }
 
-    // Cookie type impl
-    impl TypeA {
-        const NAME: &'static str = "type_a";
-    }
-    impl TypeB {
-        const NAME: &'static str = "type_b";
-    }
-    impl TypeC {
-        const NAME: &'static str = "type_c";
-    }
-    impl TypeD {
-        const NAME: &'static str = "type_d";
-    }
-    
     // read and write for type a 
     impl OutgoingConfig for TypeA {
         type Insert = GetType;
-
-        const COOKIE_NAME: &'static str = Self::NAME;
     }
     impl IncomingConfig for TypeA {
         type Get = GetType;
-
-        const COOKIE_NAME: &'static str = Self::NAME;
     }
 
     // read and write for type b
     impl OutgoingConfig for TypeB {
         type Insert = (String, i32);
-
-        const COOKIE_NAME: &'static str = Self::NAME;
 
         fn serialize(values: Self::Insert) -> serde_json::Value {
             json!({
@@ -178,14 +165,11 @@ mod tests {
     }
     impl IncomingConfig for TypeB {
         type Get = GetType;
-        const COOKIE_NAME: &'static str = Self::NAME;
     }
 
     // read and write for type c
     impl OutgoingConfig for TypeC {
         type Insert = GetType;
-
-        const COOKIE_NAME: &'static str = Self::NAME;
 
         fn attributes<'c>() -> Attributes<'c> {
             let date = Date::from_calendar_date(2024, Month::January,1).unwrap();
@@ -205,14 +189,11 @@ mod tests {
     }
     impl IncomingConfig for TypeC {
         type Get = GetType;
-        const COOKIE_NAME: &'static str = Self::NAME;
     }
 
     // read and write for type d
     impl OutgoingConfig for TypeD {
         type Insert = GetType;
-
-        const COOKIE_NAME: &'static str = Self::NAME;
 
         fn attributes<'c>() -> Attributes<'c> {
             Attributes::new().permanent(true)
@@ -220,8 +201,6 @@ mod tests {
     }
     impl IncomingConfig for TypeD {
         type Get = GetType;
-
-        const COOKIE_NAME: &'static str = Self::NAME;
     }
 
     #[test]

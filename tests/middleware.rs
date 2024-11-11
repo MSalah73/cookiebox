@@ -3,18 +3,17 @@ use actix_web::{
     dev::Payload, test, web, App, FromRequest, HttpMessage, HttpRequest, HttpResponse
 };
 use std::future::{ready, Ready};
-
+use bakery_macros::cookie;
+use bakery::cookies::CookieName;
+#[cookie(name = "Type A")]
 pub struct TypeA;
-impl TypeA {
-    const NAME: &'static str = "Type A";
-}
+
 impl IncomingConfig for TypeA {
     type Get = String;
-    const COOKIE_NAME: &'static str = Self::NAME; 
 }
 impl OutgoingConfig for TypeA {
     type Insert = String;
-    const COOKIE_NAME: &'static str = Self::NAME; 
+
     fn attributes<'c>() -> Attributes<'c> {
         Attributes::new().same_site(SameSite::Lax).http_only(true)
     }
@@ -27,7 +26,6 @@ impl FromRequest for CookieCollection<'static>{
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
-        // Data is cheep to clone since it uses arc
         let a = req.extensions();
         assert!(a.get::<Storage>().is_some());
         match req.extensions().get::<Storage>() {
@@ -42,12 +40,10 @@ async fn register_cookie(cookie: CookieCollection<'_>) -> HttpResponse {
 }
 async fn get_cookie(cookie: CookieCollection<'_>) -> HttpResponse {
     let cookie = cookie.0.get().expect("Unable to get cookie");
-    //assert_eq!(cookie, "id");
     HttpResponse::Ok().json(cookie)
 }
 async fn get_all_cookie(cookie: CookieCollection<'_>) -> HttpResponse {
     let cookie = cookie.0.get_all().expect("Unable to get cookies");
-    //assert_eq!(cookie, vec!["id", "id2"]);
     HttpResponse::Ok().json(cookie)
 }
 async fn remove_cookie(cookie: CookieCollection<'_>) -> HttpResponse{
