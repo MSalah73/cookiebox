@@ -1,12 +1,10 @@
+//! Holds a collection of both request and response cookies
 use std::{cell::RefCell, rc::Rc};
 
 use biscotti::{RequestCookies, ResponseCookies};
 
-// Would be possible to use none here - initialize them when needed
-// Response - when first insert
-// Request Empty if there are no response cookie - handle error saying no cookie data was found
 #[derive(Clone)]
-pub struct Storage<'s>{
+pub struct Storage<'s> {
     pub(crate) request_storage: Rc<RefCell<RequestCookies<'s>>>,
     pub(crate) response_storage: Rc<RefCell<ResponseCookies<'s>>>,
 }

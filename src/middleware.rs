@@ -1,10 +1,12 @@
+use actix_utils::future::{ready, Ready};
 use actix_web::{
-    dev::{forward_ready, ResponseHead, Service, ServiceRequest, ServiceResponse, Transform}, http::header::{HeaderValue, SET_COOKIE}, HttpMessage
+    dev::{forward_ready, ResponseHead, Service, ServiceRequest, ServiceResponse, Transform},
+    http::header::{HeaderValue, SET_COOKIE},
+    HttpMessage,
 };
 use anyhow::anyhow;
 use biscotti::{errors::ProcessIncomingError, Processor, RequestCookie};
 use std::{future::Future, pin::Pin, rc::Rc};
-use actix_utils::future::{ready, Ready};
 
 use crate::Storage;
 
@@ -63,14 +65,13 @@ where
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
     forward_ready!(service);
-    
+
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let service = Rc::clone(&self.service);
         let processor = Rc::clone(&self.processor);
-        let storage =  Storage::new();
+        let storage = Storage::new();
 
         Box::pin(async move {
-            
             //clone storage is cheap, since we are only coping the rc
             extract_cookies(&req, &processor, storage.clone()).map_err(e500)?;
 
@@ -78,7 +79,12 @@ where
 
             let mut response = service.call(req).await?;
 
-            process_response_cookies(response.response_mut().head_mut(), &processor, storage.clone()).map_err(e500)?;
+            process_response_cookies(
+                response.response_mut().head_mut(),
+                &processor,
+                storage.clone(),
+            )
+            .map_err(e500)?;
 
             Ok(response)
         })
@@ -87,16 +93,19 @@ where
 
 // Currently, the parse header methods and process_incoming method does not support returning a RequestCookie with owned
 // name and value only borrowed. for the time being, I have reconstructed the parse header method to do just that until proper
-// support in added to the biscotti crate.  
-fn extract_cookies(req: &ServiceRequest, processor: &Processor, storage: Storage) -> Result<(), anyhow::Error> 
-{
+// support in added to the biscotti crate.
+fn extract_cookies(
+    req: &ServiceRequest,
+    processor: &Processor,
+    storage: Storage,
+) -> Result<(), anyhow::Error> {
     let cookie_header = req.headers().get(actix_web::http::header::COOKIE);
 
     let cookie_header = match cookie_header {
-        Some(header) => header.to_str().map_err(|e| {
-            anyhow!("Invalid cookie header encoding: {}", e)
-        })?,
-        None => return Ok(())
+        Some(header) => header
+            .to_str()
+            .map_err(|e| anyhow!("Invalid cookie header encoding: {}", e))?,
+        None => return Ok(()),
     };
 
     for cookie in cookie_header.split(';') {
@@ -107,12 +116,18 @@ fn extract_cookies(req: &ServiceRequest, processor: &Processor, storage: Storage
         let (name, value) = match cookie.split_once('=') {
             Some((name, value)) => (name.trim(), value.trim()),
             None => {
-                return Err(anyhow!("Expected a name-value pair, but no `=` was found in `{}`", cookie.to_string()));
+                return Err(anyhow!(
+                    "Expected a name-value pair, but no `=` was found in `{}`",
+                    cookie.to_string()
+                ));
             }
         };
 
         if name.is_empty() {
-            return Err(anyhow!("The name of a cookie cannot be empty, but found an empty name with `{}` as value", value.to_string()));
+            return Err(anyhow!(
+                "The name of a cookie cannot be empty, but found an empty name with `{}` as value",
+                value.to_string()
+            ));
         }
 
         let cookie = match processor.process_incoming(name, value) {
@@ -121,9 +136,12 @@ fn extract_cookies(req: &ServiceRequest, processor: &Processor, storage: Storage
                 let t = match e {
                     ProcessIncomingError::Crypto(_) => "an encrypted",
                     ProcessIncomingError::Decoding(_) => "a singed",
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 };
-                return Err(anyhow!("Failed to process `{}` as {t} request cookie", name));
+                return Err(anyhow!(
+                    "Failed to process `{}` as {t} request cookie",
+                    name
+                ));
             }
         };
 
@@ -136,13 +154,12 @@ fn extract_cookies(req: &ServiceRequest, processor: &Processor, storage: Storage
 fn process_response_cookies(
     response: &mut ResponseHead,
     processor: &Processor,
-    storage: Storage
+    storage: Storage,
 ) -> Result<(), anyhow::Error> {
     let response_storage = storage.response_storage.take();
-    for cookie in response_storage.header_values(&processor) {
-        let cookie = HeaderValue::from_str(&cookie).map_err(|e| {
-            anyhow!("Failed to attached cookies to outgoing response: {}", e)
-        })?;
+    for cookie in response_storage.header_values(processor) {
+        let cookie = HeaderValue::from_str(&cookie)
+            .map_err(|e| anyhow!("Failed to attached cookies to outgoing response: {}", e))?;
         response.headers_mut().append(SET_COOKIE, cookie);
     }
 

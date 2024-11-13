@@ -7,7 +7,7 @@ description = "Strongly typed cookie management crate"
 license = "MIT OR Apache-2.0"
 
 [workspace]
-members = ["macros"]
+members = ["macros",] 
 
 [dependencies]
 bakery-macros = { version = "0.1.0", path = "macros"}
@@ -21,4 +21,4 @@ actix-utils = "3.0.1"
 
 [dev-dependencies]
 external_crate = { package = "bakery", version = "0.1.0" }
-actix-web = "^4.9"
+actix-web = "4.9"
