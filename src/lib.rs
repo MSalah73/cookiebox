@@ -4,8 +4,8 @@
 //! It allows you to define, configure, and retrieve cookies with minimal boilerplate.
 //!
 //! # Features
-//! - bakery uses [biscotti](https://docs.rs/biscotti/latest/biscotti/) under the hood which inherit most of it's features.
-//! - Supports custom configuration settings per individual cookie
+//! - This crate uses [biscotti](https://docs.rs/biscotti/latest/biscotti/) under the hood which inherit most of it's features.
+//! - Supports custom configuration settings per cookie
 //! - Define specific types for deserializing cookie values during retrieval
 //! - Customize data type and serialization method for each cookie.
 //! - A Simple and type safe interface for retrieving, adding, removing cookies. 
@@ -62,7 +62,7 @@
 //!        )
 //!    }
 //!    
-//!    // Set the appropriate attribute for the cookie check `Attributes`` for more details
+//!    // Set the appropriate attribute for the cookie check `Attributes` for more details
 //!    fn attributes<'c>() -> Attributes<'c> {
 //!        Attributes::new().same_site(SameSite::Lax).http_only(true)
 //!    }
@@ -93,7 +93,7 @@ mod middleware;
 mod storage;
 
 pub use bakery_macros;
-pub use biscotti::{Expiration, Processor, ProcessorConfig, SameSite};
+pub use biscotti::{Expiration, Processor, ProcessorConfig, SameSite, time};
 pub use attributes::Attributes;
 pub use middleware::CookieMiddleware;
 pub use storage::Storage;

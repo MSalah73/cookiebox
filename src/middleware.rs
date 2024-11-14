@@ -10,6 +10,30 @@ use std::{future::Future, pin::Pin, rc::Rc};
 
 use crate::Storage;
 
+/// bakery's cookie middleware
+/// 
+/// [CookieMiddleware] generates storage data from the cookie header and transform cookies via the [Processor](https://docs.rs/biscotti/latest/biscotti/struct.Processor.html).
+/// 
+/// ```rust
+/// use actix_web::{web, App, HttpServer, HttpResponse};
+/// use bakery::{Processor, ProcessorConfig, CookieMiddleware};
+///  
+/// #[actix_web::main]
+/// async fn main() -> std::io::Result<()> {
+///     // Start by creating a `Processor` from the `ProcessorConfig`
+///     // This decides which cookie needs to decrypted or verified.
+///     let processor: Processor = ProcessorConfig::default().into();
+///    
+///     HttpServer::new(move ||
+///             App::new()
+///             // Add cookie middleware 
+///             .wrap(CookieMiddleware::new(processor.clone()))
+///             .default_service(web::to(|| HttpResponse::Ok())))
+///         .bind(("127.0.0.1", 8080))?
+///         .run()
+///         .await
+/// }
+/// ```
 pub struct CookieMiddleware {
     processor: Rc<Processor>,
 }
@@ -60,8 +84,6 @@ where
 {
     type Response = ServiceResponse<B>;
     type Error = actix_web::Error;
-    // We only gonna use LocalBoxFuture from futures-rs
-    // no need to import a whole dependency where can just the equivalent here
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
     forward_ready!(service);
@@ -72,7 +94,6 @@ where
         let storage = Storage::new();
 
         Box::pin(async move {
-            //clone storage is cheap, since we are only coping the rc
             extract_cookies(&req, &processor, storage.clone()).map_err(e500)?;
 
             req.extensions_mut().insert(storage.clone());
@@ -94,6 +115,7 @@ where
 // Currently, the parse header methods and process_incoming method does not support returning a RequestCookie with owned
 // name and value only borrowed. for the time being, I have reconstructed the parse header method to do just that until proper
 // support in added to the biscotti crate.
+/// Extract the cookies from the cookie header and fill the storage with incoming cookie
 fn extract_cookies(
     req: &ServiceRequest,
     processor: &Processor,
@@ -151,6 +173,7 @@ fn extract_cookies(
 
     Ok(())
 }
+/// Encrypt or singed outgoing cookie before sending it off
 fn process_response_cookies(
     response: &mut ResponseHead,
     processor: &Processor,

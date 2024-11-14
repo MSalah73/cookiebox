@@ -1,8 +1,8 @@
-//! Holds a collection of both request and response cookies
 use std::{cell::RefCell, rc::Rc};
 
 use biscotti::{RequestCookies, ResponseCookies};
 
+/// Holds a collection of both request and response cookies
 #[derive(Clone)]
 pub struct Storage<'s> {
     pub(crate) request_storage: Rc<RefCell<RequestCookies<'s>>>,

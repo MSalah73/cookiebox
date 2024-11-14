@@ -1,4 +1,4 @@
-//! Bakery core functionality  
+//! Bakery's core functionality  
 use crate::attributes::{Attributes, AttributesSetter};
 use crate::storage::Storage;
 use biscotti::{RemovalCookie, ResponseCookie};
@@ -8,6 +8,8 @@ use serde_json::{json, Value};
 use std::any::type_name;
 use thiserror::Error;
 
+
+/// The error returned by [IncomingConfig] get methods
 #[derive(Error, Debug, PartialEq)]
 pub enum BakeryError {
     #[error("`{0}` does not exist")]
@@ -16,11 +18,13 @@ pub enum BakeryError {
     Deserialization(String, String),
 }
 
+/// Base struct for cookie generic types
 pub struct Cookie<'c, T> {
     storage: Storage<'c>,
     attributes: Option<Attributes<'c>>,
     _marker: std::marker::PhantomData<T>,
 }
+
 impl<'c, T> Cookie<'c, T> {
     /// Create a cookie instance for any generic type parameter
     pub fn new(storage: &Storage<'c>) -> Self {
@@ -31,8 +35,36 @@ impl<'c, T> Cookie<'c, T> {
         }
     }
 }
-/// Provide methods to get data from a cookie instance for any generic type parameter that implements [IncomingConfig]
+/// Provide methods to `get` data from a cookie instance for any generic type parameter that implements [IncomingConfig]
 impl<T: IncomingConfig> Cookie<'_, T> {
+    /// Retrieves the date from the [Storage] request collection using the cookie name specified by [CookieName].
+    ///
+    /// The date is returned as the associated type defined by the `Get` from type [CookieName].
+    /// ```rust
+    /// // Set up generic cookie type
+    /// #[cookie(name = "my-cookie")]
+    /// pub struct MyCookie;
+    /// impl IncomingConfig for MyCookie {
+    ///     type Get = String;
+    /// }
+    /// impl OutgoingConfig for MyCookie {
+    ///     type Insert = String;
+    /// }
+    ///  
+    /// // Initialize storage and with request data
+    /// let storage = Storage::new();
+    /// let incoming_cookie = RequestCookie::new("my-cookie", r#""some_value""#);
+    ///  
+    /// storage.request_storage.borrow_mut().append(incoming_cookie);
+    ///  
+    /// // Use generic type to create a cookie instance
+    /// let cookie = Cookie::<MyCookie>::new(&storage);
+    ///
+    /// let typed_request_value = cookie.get();
+    ///
+    /// assert_eq!(typed_request_value.is_ok(), true);
+    /// assert_eq!(typed_request_value, Ok("some_value".to_string()));
+    /// ```
     pub fn get(&self) -> Result<T::Get, BakeryError> {
         let data = &self
             .storage
@@ -51,6 +83,36 @@ impl<T: IncomingConfig> Cookie<'_, T> {
         Ok(data)
     }
 
+    /// Retrieves a list of data items from the [Storage] request collection with the same name using the cookie name specified by [CookieName].
+    ///
+    /// Each item in the list is of the associated type `Get` type from [CookieName].
+    /// ```rust
+    /// // Set up generic cookie type
+    /// #[cookie(name = "my-cookie")]
+    /// pub struct MyCookie;
+    /// impl IncomingConfig for MyCookie {
+    ///     type Get = String;
+    /// }
+    /// impl OutgoingConfig for MyCookie {
+    ///     type Insert = String;
+    /// }
+    ///  
+    /// // Initialize storage and with request data
+    /// let storage = Storage::new();
+    /// let incoming_cookie_1 = RequestCookie::new("my-cookie", r#""some_value_1""#);
+    /// let incoming_cookie_2 = RequestCookie::new("my-cookie", r#""some_value_2""#);
+    ///  
+    /// storage.request_storage.borrow_mut().append(incoming_cookie_1);
+    /// storage.request_storage.borrow_mut().append(incoming_cookie_2);
+    ///  
+    /// // Use generic type to create a cookie instance
+    /// let cookie = Cookie::<MyCookie>::new(&storage);
+    ///  
+    /// let typed_request_value = cookie.get_all();
+    ///  
+    /// assert_eq!(typed_request_value.is_ok(), true);
+    /// assert_eq!(typed_request_value, Ok(vec!["some_value_1".to_string(), "some_value_2".to_string()]));
+    /// ```
     pub fn get_all(&self) -> Result<Vec<T::Get>, BakeryError> {
         let data = &self.storage.request_storage.borrow();
 
@@ -71,9 +133,41 @@ impl<T: IncomingConfig> Cookie<'_, T> {
     }
 }
 
-/// Provide methods to insert and remove from a cookie instance for any generic type parameter that implements [OutgoingConfig]
+/// Provide methods to `insert` and `remove` from a cookie instance for any generic type parameter that implements [OutgoingConfig]
 impl<'c, T: OutgoingConfig> Cookie<'c, T> {
-    /// Given a  
+    /// Add a cookie to the [Storage] response collection which later attached to an HTTP response using the `Set-Cookie` header.
+    ///
+    /// ```rust
+    /// // Set up generic cookie type
+    /// #[cookie(name = "my-cookie")]
+    /// pub struct MyCookie;
+    /// impl IncomingConfig for MyCookie {
+    ///     type Get = String;
+    /// }
+    /// impl OutgoingConfig for MyCookie {
+    ///     type Insert = String;
+    /// }
+    ///  
+    /// // Initialize storage
+    /// let storage = Storage::new();
+    /// // Getting the cookie Id to get cookie from response storage
+    /// let outgoing_cookie = ResponseCookie::new("my-cookie", r#""some_value""#);
+    /// // The id determined by name path and domain
+    /// let outgoing_cookie_id = outgoing_cookie.id().set_path("/");
+    /// 
+    /// let cookie = Cookie::<MyCookie>::new(&storage);
+    /// 
+    /// cookie.insert("some_value".to_string());
+    /// 
+    /// let binding = storage.response_storage.borrow();
+    /// let response_cookie = binding.get(outgoing_cookie_id);
+    /// 
+    /// assert_eq!(response_cookie.is_some(), true);
+    /// assert_eq!(
+    ///     response_cookie.unwrap().name_value(),
+    ///     ("my-cookie", r#""some_value""#)
+    /// );
+    /// ``` 
     pub fn insert(&self, value: T::Insert) {
         let data = T::serialize(value);
 
@@ -91,6 +185,43 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
             .borrow_mut()
             .insert(response_cookie);
     }
+    /// Add a removal cookie to the [Storage] response collection which later attached to an HTTP response using the `Set-Cookie` header.
+    ///
+    /// ```rust
+    /// // Set up generic cookie type
+    /// #[cookie(name = "my-cookie")]
+    /// pub struct MyCookie;
+    /// impl IncomingConfig for MyCookie {
+    ///     type Get = String;
+    /// }
+    /// impl OutgoingConfig for MyCookie {
+    ///     type Insert = String;
+    /// }
+    ///  
+    /// // Initialize storage
+    /// let storage = Storage::new();
+    /// // Getting the cookie Id to get cookie from response storage
+    /// let outgoing_cookie = ResponseCookie::new("my-cookie", r#""some_value""#);
+    /// // The id determined by name path and domain
+    /// let outgoing_cookie_id = outgoing_cookie.id().set_path("/");
+    /// 
+    /// // removal cookie set up
+    /// let date = Date::from_calendar_date(1970, Month::January, 1).unwrap();
+    /// let time = Time::from_hms(0, 0, 0).unwrap();
+    /// let removal_date = OffsetDateTime::new_utc(date, time);
+    ///
+    /// let cookie = Cookie::<MyCookie>::new(&storage);
+    /// 
+    /// let binding = storage.response_storage.borrow();
+    /// let response_cookie = binding.get(outgoing_cookie_id);cookie.remove();
+    ///
+    /// assert_eq!(response_cookie.is_some(), true);
+    /// assert_eq!(response_cookie.unwrap().name_value(), ("my-cookie", ""));
+    /// assert_eq!(
+    ///     response_cookie.unwrap().expires().unwrap(),
+    ///     Expiration::from(removal_date)
+    /// );
+    /// ```
     pub fn remove(&self) {
         let attributes = match &self.attributes {
             Some(attributes) => attributes,
@@ -108,18 +239,24 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
     }
 }
 
-/// Provide the generic cookie type with custom configuration along with insert with custom type and remove methods
-///```rust
-///// OutgoingConfig give the cookie type insert and remove cookie
-///impl OutgoingConfig for MyCookie {
+
+/// Provide internal customization for `insert` and `remove` methods in [Cookie].
+/// 
+/// The `insert` and `remove` will be available for types used as generic parameters for `Cookie`.
+/// ```rust
+/// // Define a generic cookie type struct
+/// #[cookie(name = "__my-cookie")]
+/// pub struct MyCookie;
+/// 
+/// impl OutgoingConfig for MyCookie {
 ///    // Configure the insert type
 ///    type Insert = String;
 ///    
-///    // The default serialization is used here no need to customize the serialization method. 
+///    // The default serialization is used here, if further customization implement the `serialize` method. 
 ///    
 ///    // The default attributes is used here which consists of http-only: true, SameSite: Lax, and 
 ///    // path: "/"
-///}
+/// }
 /// ```
 pub trait OutgoingConfig: CookieName {
     /// The serialization type when inserting a cookie to storage
@@ -136,25 +273,27 @@ pub trait OutgoingConfig: CookieName {
     }
 }
 
-/// Provide the generic cookie type with get and get_all method with custom type
-/// ```rust 
-///// Define a generic cookie type struct
-///#[cookie(name = "__my-cookie")]
-///pub struct MyCookie;
+/// Provide internal customization for `get` and `get_all` methods in [Cookie].
 ///
-///// IncomingConfig give the cookie type get and get_all cookie with similar name
-///impl IncomingConfig for MyCookie {
-///    // Configure the get return type
-///    type Get = String;
-///}
+/// The `get` and `get_all` will be available for types used as generic parameters for `Cookie`.
+/// ```rust 
+/// // Define a generic cookie type struct
+/// #[cookie(name = "__my-cookie")]
+/// pub struct MyCookie;
+///
+/// impl IncomingConfig for MyCookie {
+///     // Configure the get return type
+///     type Get = String;
+/// }
 /// ```
 pub trait IncomingConfig: CookieName {
     /// The deserialization type when getting a cookie from storage
     type Get: DeserializeOwned;
 }
+
 /// This is the base implementation of a cookie type
 /// 
-/// This is either implemented manually or with macro #[Cookie(name = "...")]
+/// This is either implemented manually or with macro `#[Cookie(name = "...")]`
 pub trait CookieName {
     const COOKIE_NAME: &'static str;
 }
@@ -162,12 +301,10 @@ pub trait CookieName {
 #[cfg(test)]
 mod tests {
     use crate::bakery_macros::cookie;
-    use crate::{Attributes, SameSite, Storage};
+    use crate::{Attributes, SameSite, Storage, Expiration};
+    use crate::time::{Date, Duration, Month, OffsetDateTime, Time};
     use crate::cookies::{Cookie, CookieName, IncomingConfig, OutgoingConfig};
-    use biscotti::{
-        time::{Date, Duration, Month, OffsetDateTime, Time},
-        Expiration, RequestCookie, ResponseCookie,
-    };
+    use biscotti::{RequestCookie, ResponseCookie};
     use serde::{Deserialize, Serialize};
     use serde_json::json;
 
@@ -215,7 +352,7 @@ mod tests {
         fn attributes<'c>() -> Attributes<'c> {
             let date = Date::from_calendar_date(2024, Month::January, 1).unwrap();
             let time = Time::from_hms(0, 0, 0).unwrap();
-            let permanent = OffsetDateTime::new_utc(date, time);
+            let date = OffsetDateTime::new_utc(date, time);
 
             Attributes::new()
                 .path("/some-path")
@@ -224,7 +361,7 @@ mod tests {
                 .secure(true)
                 .http_only(true)
                 .partitioned(true)
-                .expires(Expiration::from(permanent))
+                .expires(Expiration::from(date))
                 .max_age(Duration::hours(10))
         }
     }
