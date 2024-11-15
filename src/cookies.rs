@@ -44,18 +44,18 @@ impl<T: IncomingConfig> Cookie<'_, T> {
     /// use cookiebox::cookiebox_macros::cookie;
     /// use cookiebox::cookies::{Cookie, CookieName, IncomingConfig};
     /// use actix_web::HttpResponse;
-    /// 
+    ///
     /// // Set up generic cookie type
     /// #[cookie(name = "my-cookie")]
     /// pub struct MyCookie;
-    /// 
+    ///
     /// impl IncomingConfig for MyCookie {
     ///     type Get = String;
     /// }
     ///  
-    /// // Assume implementation of `FromRequest` to create Cookie instances 
+    /// // Assume implementation of `FromRequest` to create Cookie instances
     /// pub struct CookieCollection<'c>(Cookie<'c, MyCookie>);
-    /// 
+    ///
     /// async fn get_cookie(cookie: CookieCollection<'_>) -> HttpResponse {
     ///     cookie.0.get();
     ///     HttpResponse::Ok().finish()
@@ -82,24 +82,24 @@ impl<T: IncomingConfig> Cookie<'_, T> {
     /// Retrieves a list of data items from the [Storage] request collection with the same name using the cookie name specified by [CookieName].
     ///
     /// Each item in the list is of the associated type `Get` type from [CookieName].
-    /// 
+    ///
     /// # Example
     /// ```no_run
     /// use cookiebox::cookiebox_macros::cookie;
     /// use cookiebox::cookies::{Cookie, CookieName, IncomingConfig};
     /// use actix_web::HttpResponse;
-    /// 
+    ///
     /// // Set up generic cookie type
     /// #[cookie(name = "my-cookie")]
     /// pub struct MyCookie;
-    /// 
+    ///
     /// impl IncomingConfig for MyCookie {
     ///     type Get = String;
     /// }
     ///  
-    /// // Assume implementation of `FromRequest` to create Cookie instances 
+    /// // Assume implementation of `FromRequest` to create Cookie instances
     /// pub struct CookieCollection<'c>(Cookie<'c, MyCookie>);
-    /// 
+    ///
     /// async fn get_all_cookies(cookie: CookieCollection<'_>) -> HttpResponse {
     ///     // return a Vec of set type
     ///     cookie.0.get_all();
@@ -117,7 +117,10 @@ impl<T: IncomingConfig> Cookie<'_, T> {
 
         for value in data.values() {
             let data = serde_json::from_str(value).map_err(|_| {
-                CookieBoxError::Deserialization(value.to_string(), type_name::<T::Get>().to_string())
+                CookieBoxError::Deserialization(
+                    value.to_string(),
+                    type_name::<T::Get>().to_string(),
+                )
             })?;
             result.push(data);
         }
@@ -135,18 +138,18 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
     /// use cookiebox::cookiebox_macros::cookie;
     /// use cookiebox::cookies::{Cookie, CookieName, OutgoingConfig};
     /// use actix_web::HttpResponse;
-    /// 
+    ///
     /// // Set up generic cookie type
     /// #[cookie(name = "my-cookie")]
     /// pub struct MyCookie;
-    /// 
+    ///
     /// impl OutgoingConfig for MyCookie {
     ///     type Insert = String;
     /// }
     ///  
-    /// // Assume implementation of `FromRequest` to create Cookie instances 
+    /// // Assume implementation of `FromRequest` to create Cookie instances
     /// pub struct CookieCollection<'c>(Cookie<'c, MyCookie>);
-    /// 
+    ///
     /// async fn insert_cookie(cookie: CookieCollection<'_>) -> HttpResponse {
     ///     // The cookie removal id determined by name path and domain
     ///     cookie.0.insert("cookie value".to_string());
@@ -173,13 +176,13 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
     /// Add a removal cookie to the [Storage] response collection which later attached to an HTTP response using the `Set-Cookie` header.
     ///
     /// Cookie removal is determined by name, path, and domain
-    /// 
+    ///
     /// # Example
     /// ```no_run
     /// use cookiebox::cookiebox_macros::cookie;
     /// use cookiebox::cookies::{Cookie, CookieName, OutgoingConfig};
     /// use actix_web::HttpResponse;
-    /// 
+    ///
     /// // Set up generic cookie type
     /// #[cookie(name = "my-cookie")]
     /// pub struct MyCookie;
@@ -188,9 +191,9 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
     ///     type Insert = String;
     /// }
     ///  
-    /// // Assume implementation of `FromRequest` to create Cookie instances 
+    /// // Assume implementation of `FromRequest` to create Cookie instances
     /// pub struct CookieCollection<'c>(Cookie<'c, MyCookie>);
-    /// 
+    ///
     /// async fn remove_cookie(cookie: CookieCollection<'_>) -> HttpResponse {
     ///     // The cookie removal determined by name, path, and domain
     ///     cookie.0.remove();
@@ -220,7 +223,7 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
 /// ```no_run
 /// use cookiebox::cookiebox_macros::cookie;
 /// use cookiebox::cookies::{CookieName, OutgoingConfig};
-/// 
+///
 /// // Define a generic cookie type struct
 /// #[cookie(name = "__my-cookie")]
 /// pub struct MyCookie;

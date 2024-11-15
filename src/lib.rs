@@ -39,7 +39,7 @@
 //!use cookiebox::{Attributes, SameSite};
 //!use cookiebox::Storage;
 //!use actix_web::{HttpRequest, FromRequest, HttpMessage, dev::Payload};
-//!use actix_utils::future::{ready, Ready}; 
+//!use actix_utils::future::{ready, Ready};
 //!use serde_json::json;
 //!
 //!// Define you cookie type struct
@@ -95,7 +95,7 @@ mod middleware;
 mod storage;
 
 pub use attributes::Attributes;
-pub use cookiebox_macros;
 pub use biscotti::{time, Expiration, Processor, ProcessorConfig, SameSite};
+pub use cookiebox_macros;
 pub use middleware::CookieMiddleware;
 pub use storage::Storage;

@@ -1,11 +1,11 @@
 
-[![crates.io](https://img.shields.io/crates/v/bakery?label=latest)](https://crates.io/crates/bakery)
-[![build status](https://github.com/Msalah73/bakery/actions/workflows/c.yml/badge.svg?branch=master)](https://github.com/Msalah73/bakery/actions/workflows/ci.yml/)
-[![Documentation](https://docs.rs/bakery/badge.svg?version=latest)](https://docs.rs/bakery/latest)
-![Apache 2.0 or MIT licensed](https://img.shields.io/crates/l/<crate>)
-[![dependency status](https://deps.rs/repo/github/Msalah73/bakery/status.svg)](https://deps.rs/repo/github/Msalah73/bakery)
+[![crates.io](https://img.shields.io/crates/v/cookiebox?label=latest)](https://crates.io/crates/cookiebox)
+[![build status](https://github.com/Msalah73/cookiebox/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Msalah73/cookiebox/actions/workflows/ci.yml/)
+[![Documentation](https://docs.rs/cookiebox/badge.svg?version=latest)](https://docs.rs/cookiebox/latest)
+![Apache 2.0 or MIT licensed](https://img.shields.io/crates/l/cookiebox)
+[![dependency status](https://deps.rs/repo/github/Msalah73/cookiebox/status.svg)](https://deps.rs/repo/github/Msalah73/cookiebox)
 
-# Bakery
+# Cookiebox
 
 <!-- cargo-rdme start -->
 
