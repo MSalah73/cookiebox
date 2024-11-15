@@ -2,20 +2,21 @@ use biscotti::{time::Duration, Expiration};
 use biscotti::{RemovalCookie, ResponseCookie, SameSite};
 use std::borrow::Cow;
 
-/// Simple builder for cookie attributes 
-/// 
+/// Simple builder for cookie attributes
+///
 /// [Attributes] acts as a facade to [ResponseCookie](https://docs.rs/biscotti/latest/biscotti/struct.ResponseCookie.html) and [RemovalCoolie](https://docs.rs/biscotti/latest/biscotti/struct.RemovalCookie.html)
-/// 
-/// ```rust
-/// use bakery::cookies::{CookieName, OutgoingConfig};
-/// use bakery::{Attributes, SameSite, Expiration};
-/// use bakery::time::{Date, Duration, Month, OffsetDateTime, Time};
-/// 
+///
+/// ```no_run
+/// use cookiebox::cookiebox_macros::cookie;
+/// use cookiebox::cookies::{CookieName, OutgoingConfig};
+/// use cookiebox::{Attributes, SameSite, Expiration};
+/// use cookiebox::time::{Date, Duration, Month, OffsetDateTime, Time};
+///
 /// #[cookie(name = "my-cookie")]
 /// pub struct MyCookie;
-/// 
+///
 /// impl OutgoingConfig for MyCookie {
-///     type Insert = GetType;
+///     type Insert = String;
 ///
 ///     fn attributes<'c>() -> Attributes<'c> {
 ///         let date = Date::from_calendar_date(2024, Month::January, 1).unwrap();
@@ -50,7 +51,6 @@ pub struct Attributes<'c> {
     permanent: bool,
 }
 impl<'c> Attributes<'c> {
-
     /// Create a new [Attributes]
     pub fn new() -> Self {
         Attributes {
@@ -72,7 +72,7 @@ impl<'c> Attributes<'c> {
         self
     }
     /// Sets the `domain` of `self` to `domain`
-    /// 
+    ///
     /// **Note**: if the Domain starts with a leading `.`, the leading `.` is stripped.
     #[inline]
     pub fn domain<T: Into<Cow<'c, str>>>(mut self, domain: T) -> Self {
@@ -92,7 +92,7 @@ impl<'c> Attributes<'c> {
         self
     }
     /// Sets the `same_site` of `self` to `value`
-    /// 
+    ///
     /// **Note**: If `SameSite` attribute is set to `None`, the `Secure` flag will be set automatically , unless explicitly set to `false`.
     pub fn same_site<T: Into<Option<SameSite>>>(mut self, value: T) -> Self {
         self.same_site = value.into();
@@ -111,7 +111,7 @@ impl<'c> Attributes<'c> {
         self
     }
     /// Sets the `partitioned` of `self` to `value`
-    /// 
+    ///
     /// **Note**: Partitioned cookies require the `Secure` attribute. If not set explicitly, the browser will automatically set it to `true`.
 
     #[inline]

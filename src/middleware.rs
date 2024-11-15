@@ -10,13 +10,13 @@ use std::{future::Future, pin::Pin, rc::Rc};
 
 use crate::Storage;
 
-/// bakery's cookie middleware
-/// 
+/// cookiebox's cookie middleware
+///
 /// [CookieMiddleware] generates storage data from the cookie header and transform cookies via the [Processor](https://docs.rs/biscotti/latest/biscotti/struct.Processor.html).
-/// 
-/// ```rust
+///
+/// ```no_run
 /// use actix_web::{web, App, HttpServer, HttpResponse};
-/// use bakery::{Processor, ProcessorConfig, CookieMiddleware};
+/// use cookiebox::{Processor, ProcessorConfig, CookieMiddleware};
 ///  
 /// #[actix_web::main]
 /// async fn main() -> std::io::Result<()> {
@@ -26,7 +26,7 @@ use crate::Storage;
 ///    
 ///     HttpServer::new(move ||
 ///             App::new()
-///             // Add cookie middleware 
+///             // Add cookie middleware
 ///             .wrap(CookieMiddleware::new(processor.clone()))
 ///             .default_service(web::to(|| HttpResponse::Ok())))
 ///         .bind(("127.0.0.1", 8080))?

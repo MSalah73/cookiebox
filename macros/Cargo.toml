@@ -1,9 +1,9 @@
 [package]
-name = "bakery-macros"
+name = "cookiebox-macros"
 version = "0.1.0"
 edition = "2021"
 authors = ["Mohammed (Zack) Salah <msalahcs73@gmail.com>"]
-description = "macro Implementation for bakery crate"
+description = "macro Implementation for cookiebox crate"
 license = "MIT OR Apache-2.0"
 
 [lib]

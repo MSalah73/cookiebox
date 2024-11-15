@@ -1,5 +1,5 @@
 [package]
-name = "bakery"
+name = "cookiebox"
 version = "0.1.0"
 edition = "2021"
 authors = ["Mohammed (Zack) Salah <msalahcs73@gmail.com>"]
@@ -10,15 +10,14 @@ license = "MIT OR Apache-2.0"
 members = ["macros",] 
 
 [dependencies]
-bakery-macros = { version = "0.1.0", path = "macros"}
+cookiebox-macros = { version = "0.1.0", path = "macros"}
 biscotti = "0.3.4"
-serde_json = "1.0"
-serde = { version = "1.0.208", features = ["derive"] }
-anyhow = "1.0.86"
-thiserror = "1.0.64"
+serde_json = "1.0.132"
+serde = { version = "1.0.215", features = ["derive"] }
+anyhow = "1.0.93"
+thiserror = "2.0.3"
 actix-web = "4.9"
 actix-utils = "3.0.1"
 
 [dev-dependencies]
-external_crate = { package = "bakery", version = "0.1.0" }
 actix-web = "4.9"

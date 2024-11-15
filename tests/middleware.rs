@@ -1,11 +1,9 @@
 use actix_web::{
     dev::Payload, test, web, App, FromRequest, HttpMessage, HttpRequest, HttpResponse,
 };
-use bakery::bakery_macros::cookie;
-use bakery::{
-    Attributes, CookieMiddleware,  Processor, ProcessorConfig, SameSite, Storage,
-};
-use bakery::cookies::{IncomingConfig, OutgoingConfig, CookieName, Cookie};
+use cookiebox::cookiebox_macros::cookie;
+use cookiebox::cookies::{Cookie, CookieName, IncomingConfig, OutgoingConfig};
+use cookiebox::{Attributes, CookieMiddleware, Processor, ProcessorConfig, SameSite, Storage};
 use std::future::{ready, Ready};
 
 #[cookie(name = "Type A")]
@@ -31,10 +29,9 @@ impl FromRequest for CookieCollection<'static> {
     fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
         match req.extensions().get::<Storage>() {
             Some(storage) => {
-
                 Cookie::<A>::new(&storage);
                 ready(Ok(CookieCollection(Cookie::<TypeA>::new(&storage))))
-            },
+            }
             None => ready(Err("Processor not found in app data".into())),
         }
     }
