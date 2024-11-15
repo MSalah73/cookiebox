@@ -50,7 +50,7 @@ use cookiebox::cookies::{Cookie, CookieName, IncomingConfig, OutgoingConfig};
 use cookiebox::{Attributes, SameSite};
 use cookiebox::Storage;
 use actix_web::{HttpRequest, FromRequest, HttpMessage, dev::Payload};
-use actix_utils::future::{ready, Ready}; 
+use actix_utils::future::{ready, Ready};
 use serde_json::json;
 
 // Define you cookie type struct
