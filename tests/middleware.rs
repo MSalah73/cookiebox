@@ -1,14 +1,10 @@
-use actix_web::{
-    dev::Payload, test, web, App, FromRequest, HttpMessage, HttpRequest, HttpResponse,
-};
-use cookiebox::cookiebox_macros::cookie;
+use actix_web::{test, web, App, HttpMessage, HttpResponse};
+use cookiebox::cookiebox_macros::{cookie, FromRequest};
 use cookiebox::cookies::{Cookie, CookieName, IncomingConfig, OutgoingConfig};
-use cookiebox::{Attributes, CookieMiddleware, Processor, ProcessorConfig, SameSite, Storage};
-use std::future::{ready, Ready};
+use cookiebox::{Attributes, CookieMiddleware, Processor, ProcessorConfig, SameSite};
 
 #[cookie(name = "Type A")]
 pub struct TypeA;
-pub struct A;
 impl IncomingConfig for TypeA {
     type Get = String;
 }
@@ -20,22 +16,9 @@ impl OutgoingConfig for TypeA {
     }
 }
 
+#[derive(FromRequest)]
 pub struct CookieCollection<'c>(Cookie<'c, TypeA>);
 
-impl FromRequest for CookieCollection<'static> {
-    type Error = Box<dyn std::error::Error>;
-    type Future = Ready<Result<Self, Self::Error>>;
-
-    fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
-        match req.extensions().get::<Storage>() {
-            Some(storage) => {
-                Cookie::<A>::new(&storage);
-                ready(Ok(CookieCollection(Cookie::<TypeA>::new(&storage))))
-            }
-            None => ready(Err("Processor not found in app data".into())),
-        }
-    }
-}
 async fn register_cookie(cookie: CookieCollection<'_>) -> HttpResponse {
     cookie.0.insert("id".to_string());
     HttpResponse::Ok().finish()

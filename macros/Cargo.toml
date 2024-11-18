@@ -1,10 +1,11 @@
 [package]
 name = "cookiebox-macros"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Mohammed (Zack) Salah <msalahcs73@gmail.com>"]
 description = "macro Implementation for cookiebox crate"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/MSalah73/cookiebox"
 
 [lib]
 proc-macro = true
