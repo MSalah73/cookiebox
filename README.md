@@ -9,9 +9,9 @@
 
 <!-- cargo-rdme start -->
 
-A strongly typed cookie management crate for the Actix Web framework.
+A type safe cookie management crate for the Actix Web framework.
 
-cookiebox provides a robust, type-safe, and flexible approach to managing cookies in Actix web based applications.
+Cookiebox provides a robust, type safe, and flexible approach to managing cookies in Actix web based applications.
 It allows you to define, configure, and retrieve cookies with minimal boilerplate.
 
 ## Features
@@ -45,12 +45,10 @@ async fn main() -> std::io::Result<()> {
 ```
 Now, define the desired typed cookies with custom configuration
 ```rust
-use cookiebox::cookiebox_macros::cookie;
+use actix_web::HttpMessage;
+use cookiebox::cookiebox_macros::{cookie, FromRequest};
 use cookiebox::cookies::{Cookie, CookieName, IncomingConfig, OutgoingConfig};
 use cookiebox::{Attributes, SameSite};
-use cookiebox::Storage;
-use actix_web::{HttpRequest, FromRequest, HttpMessage, dev::Payload};
-use actix_utils::future::{ready, Ready};
 use serde_json::json;
 
 // Define you cookie type struct
@@ -82,23 +80,12 @@ impl OutgoingConfig for MyCookie {
        Attributes::new().same_site(SameSite::Lax).http_only(false)
    }
 }
-// Add all cookies in cookie collection
+// Once defined, you need to add these cookies in a collection struct and use derive macro to implement FromRequest
+// Note: The macro only allows struct with either a single unnamed field or multiple named fields
+#[derive(FromRequest)]
 pub struct CookieCollection<'c>(Cookie<'c, MyCookie>);
 
-//Once defined, your cookies can be accessed in request handlers by implementing `FromRequest` for a collection
-//of typed cookies.
-impl FromRequest for CookieCollection<'static> {
-   type Error = Box<dyn std::error::Error>;
-   type Future = Ready<Result<Self, Self::Error>>;
-
-   fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
-       // fetch the storage value from request extensions and add it to all your cookies
-       match req.extensions().get::<Storage>() {
-           Some(storage) => ready(Ok(CookieCollection(Cookie::<MyCookie>::new(&storage)))),
-           None => ready(Err("Storage is missing".into())),
-       }
-   }
-}
 ```
+Now your cookies can be accessed in the request handlers using teh CookieCollection as a parameter
 
 <!-- cargo-rdme end -->
