@@ -1,7 +1,7 @@
 //! A type safe cookie management crate for the Actix Web framework.
 //!
 //! Cookiebox provides a robust, type safe, and flexible approach to managing cookies in Actix web based applications.
-//! It allows you to define, configure, and retrieve cookies with minimal boilerplate.
+//! It allows you to define, configure, and manage cookies with minimal boilerplate.
 //!
 //! # Features
 //! - This crate uses [biscotti](https://docs.rs/biscotti/latest/biscotti/) under the hood which inherit most of it's features.
@@ -83,7 +83,7 @@ mod middleware;
 mod storage;
 
 pub use attributes::Attributes;
-pub use biscotti::{time, Expiration, Processor, ProcessorConfig, SameSite};
+pub use biscotti::{config, time, Expiration, Key, Processor, ProcessorConfig, SameSite};
 pub use cookiebox_macros;
 pub use middleware::CookieMiddleware;
 pub use storage::Storage;
