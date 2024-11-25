@@ -3,7 +3,7 @@ name = "cookiebox"
 version = "0.2.1"
 edition = "2021"
 authors = ["Mohammed (Zack) Salah <msalahcs73@gmail.com>"]
-description = "Strongly typed cookie management crate"
+description = "A type safe cookie management crate"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/MSalah73/cookiebox"
 
@@ -19,6 +19,3 @@ anyhow = "1.0.93"
 thiserror = "2.0.3"
 actix-web = "4.9"
 actix-utils = "3.0.1"
-
-[dev-dependencies]
-actix-web = "4.9"
