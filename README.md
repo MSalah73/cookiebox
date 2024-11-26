@@ -89,3 +89,13 @@ pub struct CookieCollection<'c>(Cookie<'c, MyCookie>);
 Now your cookies can be accessed in the request handlers using teh CookieCollection as a parameter
 
 <!-- cargo-rdme end -->
+
+# Important Notice
+
+Versions `0.1.0` and `0.2.0` of this crate are **deprecated** due to missing key features.  
+Please use version `0.2.1` or later for a fully functional implementation.
+
+Upgrade by updating your `Cargo.toml`:
+```toml
+[dependencies]
+cookiebox = "0.2.1"
