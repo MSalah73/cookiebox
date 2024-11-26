@@ -51,7 +51,7 @@ pub struct Attributes<'c> {
     permanent: bool,
 }
 impl<'c> Attributes<'c> {
-    /// Create a new [Attributes]
+    /// Create a new [Attributes] instance
     pub fn new() -> Self {
         Attributes {
             path: None,

@@ -36,16 +36,16 @@ impl<'c, T> Cookie<'c, T> {
 }
 /// Provide methods to `get` data from a cookie instance for any generic type parameter that implements [IncomingConfig]
 impl<T: IncomingConfig> Cookie<'_, T> {
-    /// Retrieves the date from the [Storage] request collection using the cookie name specified by [CookieName].
+    /// Retrieves the data from the [Storage] request collection using the cookie name specified by [CookieName].
     ///
-    /// The date is returned as the associated type defined by the `Get` from type [CookieName].
+    /// The deserialized date is returned as the associated type defined by the `Get` type from [IncomingConfig].
     /// # Example
     /// ```no_run
-    /// use cookiebox::cookiebox_macros::cookie;
+    /// use cookiebox::cookiebox_macros::{cookie, FromRequest};
     /// use cookiebox::cookies::{Cookie, CookieName, IncomingConfig};
-    /// use actix_web::HttpResponse;
+    /// use actix_web::{HttpResponse, HttpMessage};
     ///
-    /// // Set up generic cookie type
+    /// // Set up a generic cookie type
     /// #[cookie(name = "my-cookie")]
     /// pub struct MyCookie;
     ///
@@ -53,7 +53,8 @@ impl<T: IncomingConfig> Cookie<'_, T> {
     ///     type Get = String;
     /// }
     ///  
-    /// // Assume implementation of `FromRequest` to create Cookie instances
+    /// // Use macro to implement `FromRequest` for cookie collection struct
+    /// #[derive(FromRequest)]
     /// pub struct CookieCollection<'c>(Cookie<'c, MyCookie>);
     ///
     /// async fn get_cookie(cookie: CookieCollection<'_>) -> HttpResponse {
@@ -81,13 +82,13 @@ impl<T: IncomingConfig> Cookie<'_, T> {
 
     /// Retrieves a list of data items from the [Storage] request collection with the same name using the cookie name specified by [CookieName].
     ///
-    /// Each item in the list is of the associated type `Get` type from [CookieName].
+    /// Each item in the list is of the associated type `Get` from the [IncomingConfig].
     ///
     /// # Example
     /// ```no_run
-    /// use cookiebox::cookiebox_macros::cookie;
+    /// use cookiebox::cookiebox_macros::{cookie, FromRequest};
     /// use cookiebox::cookies::{Cookie, CookieName, IncomingConfig};
-    /// use actix_web::HttpResponse;
+    /// use actix_web::{HttpResponse, HttpMessage};
     ///
     /// // Set up generic cookie type
     /// #[cookie(name = "my-cookie")]
@@ -97,7 +98,8 @@ impl<T: IncomingConfig> Cookie<'_, T> {
     ///     type Get = String;
     /// }
     ///  
-    /// // Assume implementation of `FromRequest` to create Cookie instances
+    /// // Use macro to implement `FromRequest` for cookie collection struct
+    /// #[derive(FromRequest)]
     /// pub struct CookieCollection<'c>(Cookie<'c, MyCookie>);
     ///
     /// async fn get_all_cookies(cookie: CookieCollection<'_>) -> HttpResponse {
@@ -129,15 +131,15 @@ impl<T: IncomingConfig> Cookie<'_, T> {
     }
 }
 
-/// Provide methods to `insert` and `remove` from a cookie instance for any generic type parameter that implements [OutgoingConfig]
+/// Provide methods to `insert` and `remove` a cookie instance for any generic type parameter that implements [OutgoingConfig]
 impl<'c, T: OutgoingConfig> Cookie<'c, T> {
-    /// Add a cookie to the [Storage] response collection which later attached to an HTTP response using the `Set-Cookie` header.
+    /// Add a cookie to the [Storage] response collection which later attached to the HTTP response using the `Set-Cookie` header.
     ///
     /// # Example
     /// ```no_run
-    /// use cookiebox::cookiebox_macros::cookie;
+    /// use cookiebox::cookiebox_macros::{cookie, FromRequest};
     /// use cookiebox::cookies::{Cookie, CookieName, OutgoingConfig};
-    /// use actix_web::HttpResponse;
+    /// use actix_web::{HttpResponse, HttpMessage};
     ///
     /// // Set up generic cookie type
     /// #[cookie(name = "my-cookie")]
@@ -147,11 +149,11 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
     ///     type Insert = String;
     /// }
     ///  
-    /// // Assume implementation of `FromRequest` to create Cookie instances
+    /// // Use macro to implement `FromRequest` for cookie collection struct
+    /// #[derive(FromRequest)]
     /// pub struct CookieCollection<'c>(Cookie<'c, MyCookie>);
     ///
     /// async fn insert_cookie(cookie: CookieCollection<'_>) -> HttpResponse {
-    ///     // The cookie removal id determined by name path and domain
     ///     cookie.0.insert("cookie value".to_string());
     ///     HttpResponse::Ok().finish()
     /// }
@@ -173,15 +175,15 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
             .borrow_mut()
             .insert(response_cookie);
     }
-    /// Add a removal cookie to the [Storage] response collection which later attached to an HTTP response using the `Set-Cookie` header.
+    /// Add a removal cookie to the [Storage] response collection which later attached to the HTTP response using the `Set-Cookie` header.
     ///
     /// Cookie removal is determined by name, path, and domain
     ///
     /// # Example
     /// ```no_run
-    /// use cookiebox::cookiebox_macros::cookie;
+    /// use cookiebox::cookiebox_macros::{cookie, FromRequest};
     /// use cookiebox::cookies::{Cookie, CookieName, OutgoingConfig};
-    /// use actix_web::HttpResponse;
+    /// use actix_web::{HttpResponse, HttpMessage};
     ///
     /// // Set up generic cookie type
     /// #[cookie(name = "my-cookie")]
@@ -191,11 +193,11 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
     ///     type Insert = String;
     /// }
     ///  
-    /// // Assume implementation of `FromRequest` to create Cookie instances
+    /// // Use macro to implement `FromRequest` for cookie collection struct
+    /// #[derive(FromRequest)]
     /// pub struct CookieCollection<'c>(Cookie<'c, MyCookie>);
     ///
     /// async fn remove_cookie(cookie: CookieCollection<'_>) -> HttpResponse {
-    ///     // The cookie removal determined by name, path, and domain
     ///     cookie.0.remove();
     ///     HttpResponse::Ok().finish()
     /// }
@@ -219,12 +221,12 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
 
 /// Provide internal customization for `insert` and `remove` methods in [Cookie].
 ///
-/// The `insert` and `remove` will be available for types used as generic parameters for `Cookie`.
+/// The `insert` and `remove` will be available when types that implement this trait is used as generic parameters for `Cookie`.
 /// ```no_run
 /// use cookiebox::cookiebox_macros::cookie;
 /// use cookiebox::cookies::{CookieName, OutgoingConfig};
 ///
-/// // Define a generic cookie type struct
+/// // Define a generic cookie type
 /// #[cookie(name = "__my-cookie")]
 /// pub struct MyCookie;
 ///
@@ -232,7 +234,7 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
 ///    // Configure the insert type
 ///    type Insert = String;
 ///    
-///    // The default serialization is used here, if further customization implement the `serialize` method.
+///    // The default serialization is used here, if customization is needed, implement the `serialize` method.
 ///    
 ///    // The default attributes is used here which consists of http-only: true, SameSite: Lax, and
 ///    // path: "/"
@@ -242,12 +244,12 @@ pub trait OutgoingConfig: CookieName {
     /// The serialization type when inserting a cookie to storage
     type Insert: Serialize;
 
-    /// Provides default serialization for a cookie. This can can be overwriting
+    /// Provides default serialization for a cookie. This can be overwriting
     fn serialize(values: Self::Insert) -> Value {
         json!(values)
     }
 
-    /// Provides preset attributes for a cookie. This can can be overwriting
+    /// Provides preset attributes for a cookie. This can be overwriting
     fn attributes<'c>() -> Attributes<'c> {
         Attributes::default()
     }
@@ -255,7 +257,7 @@ pub trait OutgoingConfig: CookieName {
 
 /// Provide internal customization for `get` and `get_all` methods in [Cookie].
 ///
-/// The `get` and `get_all` will be available for types used as generic parameters for `Cookie`.
+/// The `get` and `get_all` will be available when types that implement this trait is used as generic parameters for `Cookie`.
 /// ```no_run
 /// use cookiebox::cookiebox_macros::cookie;
 /// use cookiebox::cookies::{CookieName, IncomingConfig};
@@ -481,7 +483,7 @@ mod tests {
             name: "some value".to_string(),
         };
 
-        // expiration cookie set up
+        // Expiration cookie set up
         let date = Date::from_calendar_date(2024, Month::January, 1).unwrap();
         let time = Time::from_hms(0, 0, 0).unwrap();
         let expiration = OffsetDateTime::new_utc(date, time);
@@ -553,7 +555,7 @@ mod tests {
         // The id determined by name path and domain
         let outgoing_cookie_id = outgoing_cookie.id().set_path("/");
 
-        // removal cookie set up
+        // Removal cookie set up
         let date = Date::from_calendar_date(1970, Month::January, 1).unwrap();
         let time = Time::from_hms(0, 0, 0).unwrap();
         let removal_date = OffsetDateTime::new_utc(date, time);

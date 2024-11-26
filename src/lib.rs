@@ -1,17 +1,17 @@
 //! A type safe cookie management crate for the Actix Web framework.
 //!
-//! Cookiebox provides a robust, type safe, and flexible approach to managing cookies in Actix web based applications.
+//! Cookiebox provides a type safe and flexible approach to managing cookies in Actix web based applications.
 //! It allows you to define, configure, and manage cookies with minimal boilerplate.
 //!
 //! # Features
-//! - This crate uses [biscotti](https://docs.rs/biscotti/latest/biscotti/) under the hood which inherit most of it's features.
-//! - Supports custom configuration settings per cookie
-//! - Define specific types for deserializing cookie values during retrieval
-//! - Customize data type and serialization method for each cookie.
-//! - A Simple and type safe interface for retrieving, adding, removing cookies.
+//! - This crate uses [biscotti](https://docs.rs/biscotti/latest/biscotti/) under the hood, which inherit most of it's features.
+//! - Offers the ability to configure settings on a per cookie basis.
+//! - Enforces type definitions for deserializing cookie values upon retrieval.
+//! - Allows customization of both the data type and data serialization.
+//! - Provides a straightforward and type safe interface for managing cookies.
 //!
 //! # Usage
-//! To start using the cookiebox crate in your web application you must register [CookieMiddleware] in your App.
+//! To start using the cookiebox in your web application, you must register [CookieMiddleware] in your App.
 //!```no_run
 //!use actix_web::{web, App, HttpServer, HttpResponse, Error};
 //!use cookiebox::{Processor, ProcessorConfig, CookieMiddleware};
@@ -32,7 +32,7 @@
 //!        .await
 //!}
 //!```
-//! Now, define the desired typed cookies with custom configuration
+//! Define your desired cookie types with customizable configurations.
 //!```no_run
 //!use actix_web::HttpMessage;
 //!use cookiebox::cookiebox_macros::{cookie, FromRequest};
@@ -40,17 +40,17 @@
 //!use cookiebox::{Attributes, SameSite};
 //!use serde_json::json;
 //!
-//!// Define you cookie type struct
+//!// Define a cookie type
 //!#[cookie(name = "__my-cookie")]
 //!pub struct MyCookie;
 //!
-//!// IncomingConfig give the cookie type get and get_all cookie with similar name
+//!// IncomingConfig gives the cookie type get and get_all cookies with similar name
 //!// You may opt out if don't want read cookie data
 //!impl IncomingConfig for MyCookie {
 //!    // Configure the get return to any custom type
 //!    type Get = String;
 //!}
-//!// OutgoingConfig give the cookie type insert and remove cookie
+//!// OutgoingConfig gives the cookie type insert and remove cookies
 //!// You may opt out if don't want insert or remove a cookie
 //!impl OutgoingConfig for MyCookie {
 //!    // Configure the insert to any custom type
@@ -64,7 +64,7 @@
 //!        )
 //!    }
 //!    
-//!    // Set the appropriate attribute for the cookie check `Attributes` for more details
+//!    // Set the appropriate attribute for the cookie, check `Attributes` for more details
 //!    fn attributes<'c>() -> Attributes<'c> {
 //!        Attributes::new().same_site(SameSite::Lax).http_only(false)
 //!    }
@@ -75,7 +75,9 @@
 //!pub struct CookieCollection<'c>(Cookie<'c, MyCookie>);
 //!
 //!```
-//!Now your cookies can be accessed in the request handlers using teh CookieCollection as a parameter
+//! Now, your cookies can be accessed in request handlers by using `CookieCollection` as a parameter.
+//!
+//! If you would like to see an example, click [here](https://github.com/MSalah73/cookiebox/tree/master/examples).
 
 mod attributes;
 pub mod cookies;
