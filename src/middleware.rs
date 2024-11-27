@@ -2,7 +2,7 @@ use actix_utils::future::{ready, Ready};
 use actix_web::{
     dev::{forward_ready, ResponseHead, Service, ServiceRequest, ServiceResponse, Transform},
     http::header::{HeaderValue, SET_COOKIE},
-    HttpMessage,
+    HttpMessage, HttpResponse,
 };
 use anyhow::anyhow;
 use biscotti::{errors::ProcessIncomingError, Processor, RequestCookie};
@@ -69,7 +69,8 @@ pub fn e500<T>(e: T) -> actix_web::Error
 where
     T: std::fmt::Debug + std::fmt::Display + 'static,
 {
-    actix_web::error::ErrorInternalServerError(e)
+    actix_web::error::InternalError::from_response(e, HttpResponse::InternalServerError().finish())
+        .into()
 }
 
 pub struct InnerCookieMiddleware<S> {
