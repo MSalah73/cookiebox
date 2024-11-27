@@ -159,7 +159,7 @@ fn extract_cookies(
                 let t = match e {
                     ProcessIncomingError::Crypto(_) => "an encrypted",
                     ProcessIncomingError::Decoding(_) => "a singed",
-                    _ => unreachable!(),
+                    _ => "an unknown",
                 };
                 return Err(anyhow!(
                     "Failed to process `{}` as {t} request cookie",
