@@ -1,4 +1,4 @@
-use biscotti::{time::Duration, Expiration};
+use biscotti::{time::SignedDuration, Expiration};
 use biscotti::{RemovalCookie, ResponseCookie, SameSite};
 use std::borrow::Cow;
 
@@ -10,7 +10,7 @@ use std::borrow::Cow;
 /// use cookiebox::cookiebox_macros::cookie;
 /// use cookiebox::cookies::{CookieName, OutgoingConfig};
 /// use cookiebox::{Attributes, SameSite, Expiration};
-/// use cookiebox::time::{Date, Duration, Month, OffsetDateTime, Time};
+/// use cookiebox::time::{SignedDuration, civil::date,tz::TimeZone};
 ///
 /// #[cookie(name = "my-cookie")]
 /// pub struct MyCookie;
@@ -19,9 +19,11 @@ use std::borrow::Cow;
 ///     type Insert = String;
 ///
 ///     fn attributes<'c>() -> Attributes<'c> {
-///         let date = Date::from_calendar_date(2024, Month::January, 1).unwrap();
-///         let time = Time::from_hms(0, 0, 0).unwrap();
-///         let date = OffsetDateTime::new_utc(date, time);
+/// 
+///         let date = date(2024, 1, 15)
+///             .at(0,0,0, 0)
+///             .to_zoned(TimeZone::UTC)
+///             .unwrap();
 ///
 ///         Attributes::new()
 ///             .path("/some-path")
@@ -33,7 +35,7 @@ use std::borrow::Cow;
 ///             .partitioned(true)
 ///             .expires(Expiration::from(date))
 ///             // max_age take precedence over expires
-///             .max_age(Duration::hours(10))
+///             .max_age(SignedDuration::from_hours(10))
 ///             // This sets max_age and expires to 20 years in the future
 ///             .permanent(true)
 ///     }
@@ -46,7 +48,7 @@ pub struct Attributes<'c> {
     http_only: Option<bool>,
     partitioned: Option<bool>,
     same_site: Option<SameSite>,
-    max_age: Option<Duration>,
+    max_age: Option<SignedDuration>,
     expires: Option<Expiration>,
     permanent: bool,
 }
@@ -100,20 +102,19 @@ impl<'c> Attributes<'c> {
     }
     /// Sets the `max_age` of `self` to `value`
     #[inline]
-    pub fn max_age<T: Into<Option<Duration>>>(mut self, value: T) -> Self {
+    pub fn max_age<T: Into<Option<SignedDuration>>>(mut self, value: T) -> Self {
         self.max_age = value.into();
         self
     }
     /// Sets the `expires` of `self` to `value`
     #[inline]
-    pub fn expires<T: Into<Option<Expiration>>>(mut self, value: T) -> Self {
-        self.expires = value.into();
+    pub fn expires<T: Into<Expiration>>(mut self, value: T) -> Self {
+        self.expires = Some(value.into());
         self
     }
     /// Sets the `partitioned` of `self` to `value`
     ///
     /// **Note**: Partitioned cookies require the `Secure` attribute. If not set explicitly, the browser will automatically set it to `true`.
-
     #[inline]
     pub fn partitioned<T: Into<Option<bool>>>(mut self, value: T) -> Self {
         self.partitioned = value.into();
@@ -161,8 +162,8 @@ impl<'c> AttributesSetter<'c> for ResponseCookie<'c> {
         } else {
             self = self.set_max_age(attributes.max_age);
 
-            if let Some(expires) = attributes.expires {
-                self = self.set_expires(expires)
+            if let Some(expires) = &attributes.expires {
+                self = self.set_expires(expires.clone())
             }
         }
 

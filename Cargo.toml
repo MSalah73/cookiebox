@@ -12,10 +12,10 @@ members = ["macros",]
 
 [dependencies]
 cookiebox-macros = { version = "0.2.0", path = "macros"}
-biscotti = "0.3.4"
+biscotti = "0.4.0"
 serde_json = "1.0.132"
-serde = { version = "1.0.215", features = ["derive"] }
+serde = { version = "1.0.215", features = ["derive"]}
 anyhow = "1.0.93"
 thiserror = "2.0.3"
-actix-web = "4.9"
+actix-web = { version = "4.9", features = ["macros"], default-features = false}
 actix-utils = "3.0.1"

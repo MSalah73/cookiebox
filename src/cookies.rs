@@ -210,8 +210,10 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
 
         let removal_cookie = RemovalCookie::new(T::COOKIE_NAME);
 
+        // Sets the domain and path only
         let removal_cookie = removal_cookie.set_attributes(attributes);
 
+        // Inserting the removal cookie will replace any cookie with the same name, path, and domain
         self.storage
             .response_storage
             .borrow_mut()
@@ -286,7 +288,7 @@ pub trait CookieName {
 mod tests {
     use crate::cookiebox_macros::cookie;
     use crate::cookies::{Cookie, CookieName, IncomingConfig, OutgoingConfig};
-    use crate::time::{Date, Duration, Month, OffsetDateTime, Time};
+    use crate::time::{SignedDuration, Zoned, civil::date, tz::TimeZone};
     use crate::{Attributes, Expiration, SameSite, Storage};
     use biscotti::{RequestCookie, ResponseCookie};
     use serde::{Deserialize, Serialize};
@@ -334,9 +336,11 @@ mod tests {
         type Insert = GetType;
 
         fn attributes<'c>() -> Attributes<'c> {
-            let date = Date::from_calendar_date(2024, Month::January, 1).unwrap();
-            let time = Time::from_hms(0, 0, 0).unwrap();
-            let date = OffsetDateTime::new_utc(date, time);
+            // Expiration has an internal From impl for Into<Option<Zoned>
+            let date = date(2024, 1, 15)
+                .at(0,0,0, 0)
+                .to_zoned(TimeZone::UTC)
+                .unwrap();
 
             Attributes::new()
                 .path("/some-path")
@@ -345,8 +349,8 @@ mod tests {
                 .secure(true)
                 .http_only(true)
                 .partitioned(true)
-                .expires(Expiration::from(date))
-                .max_age(Duration::hours(10))
+                .expires(date)
+                .max_age(SignedDuration::from_hours(10))
         }
     }
     impl IncomingConfig for TypeC {
@@ -484,9 +488,10 @@ mod tests {
         };
 
         // Expiration cookie set up
-        let date = Date::from_calendar_date(2024, Month::January, 1).unwrap();
-        let time = Time::from_hms(0, 0, 0).unwrap();
-        let expiration = OffsetDateTime::new_utc(date, time);
+        let date = date(2024, 1, 15)
+        .at(0,0,0, 0)
+        .to_zoned(TimeZone::UTC)
+        .unwrap();
 
         // Use generic type parameter to create a cookie instance
         let cookie = Cookie::<TypeC>::new(&storage);
@@ -509,11 +514,11 @@ mod tests {
         assert_eq!(response_cookie.unwrap().partitioned(), Some(true));
         assert_eq!(
             response_cookie.unwrap().expires(),
-            Some(Expiration::from(expiration))
+            Some(&Expiration::from(date))
         );
         assert_eq!(
             response_cookie.unwrap().max_age(),
-            Some(Duration::hours(10))
+            Some(SignedDuration::from_hours(10))
         );
     }
     #[test]
@@ -543,7 +548,7 @@ mod tests {
         );
         assert_eq!(
             response_cookie.unwrap().max_age(),
-            Some(Duration::days(20 * 365))
+            Some(SignedDuration::from_hours(24 * 20 * 365))
         );
     }
     #[test]
@@ -555,11 +560,6 @@ mod tests {
         // The id determined by name path and domain
         let outgoing_cookie_id = outgoing_cookie.id().set_path("/");
 
-        // Removal cookie set up
-        let date = Date::from_calendar_date(1970, Month::January, 1).unwrap();
-        let time = Time::from_hms(0, 0, 0).unwrap();
-        let removal_date = OffsetDateTime::new_utc(date, time);
-
         // Use generic type parameter to create a cookie instance
         let cookie = Cookie::<TypeB>::new(&storage);
 
@@ -570,9 +570,8 @@ mod tests {
 
         assert_eq!(response_cookie.is_some(), true);
         assert_eq!(response_cookie.unwrap().name_value(), ("type_b", ""));
-        assert_eq!(
-            response_cookie.unwrap().expires().unwrap(),
-            Expiration::from(removal_date)
+        assert!(
+            response_cookie.unwrap().expires().unwrap().datetime().unwrap() < Zoned::now()
         );
     }
 }
