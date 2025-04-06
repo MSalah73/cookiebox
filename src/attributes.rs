@@ -1,5 +1,5 @@
 use biscotti::{time::SignedDuration, Expiration};
-use biscotti::{RemovalCookie, ResponseCookie, SameSite};
+use biscotti::{RemovalCookie, ResponseCookie, ResponseCookieId, SameSite};
 use std::borrow::Cow;
 
 /// Simple builder for cookie attributes
@@ -175,6 +175,18 @@ impl<'c> AttributesSetter<'c> for ResponseCookie<'c> {
 }
 
 impl<'c> AttributesSetter<'c> for RemovalCookie<'c> {
+    fn set_attributes(mut self, attributes: &Attributes<'c>) -> Self {
+        if let Some(path) = &attributes.path {
+            self = self.set_path(path.clone())
+        }
+        if let Some(domain) = &attributes.domain {
+            self = self.set_domain(domain.clone())
+        }
+        self
+    }
+}
+
+impl<'c> AttributesSetter<'c> for ResponseCookieId<'c> {
     fn set_attributes(mut self, attributes: &Attributes<'c>) -> Self {
         if let Some(path) = &attributes.path {
             self = self.set_path(path.clone())

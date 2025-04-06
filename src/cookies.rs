@@ -1,7 +1,7 @@
 //! cookiebox's core functionality  
 use crate::attributes::{Attributes, AttributesSetter};
 use crate::storage::Storage;
-use biscotti::{RemovalCookie, ResponseCookie};
+use biscotti::{RemovalCookie, ResponseCookie, ResponseCookieId};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -69,8 +69,7 @@ impl<T: IncomingConfig> Cookie<'_, T> {
             .borrow()
             .get(T::COOKIE_NAME)
             .ok_or(CookieBoxError::NotFound(T::COOKIE_NAME.to_string()))?;
-        // Does it panic?  use clone
-        // Closure - Implement response error to remove it - i think
+
         let data = serde_json::from_str(data.value()).map_err(|_| {
             CookieBoxError::Deserialization(
                 data.value().to_string(),
@@ -175,7 +174,7 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
             .borrow_mut()
             .insert(response_cookie);
     }
-    /// Add a removal cookie to the [Storage] response collection which later attached to the HTTP response using the `Set-Cookie` header.
+    /// Add a removal cookie to the [Storage] response collection, which later attached to the HTTP response using the `Set-Cookie` header.
     ///
     /// Cookie removal is determined by name, path, and domain
     ///
@@ -218,6 +217,50 @@ impl<'c, T: OutgoingConfig> Cookie<'c, T> {
             .response_storage
             .borrow_mut()
             .insert(removal_cookie);
+    }
+    /// Discard a cookie from the response collection [Storage] only
+    ///
+    /// Discarding a cookie is determined by name, path, and domain
+    ///
+    /// # Example
+    /// ```no_run
+    /// use cookiebox::cookiebox_macros::{cookie, FromRequest};
+    /// use cookiebox::cookies::{Cookie, CookieName, OutgoingConfig};
+    /// use actix_web::{HttpResponse, HttpMessage};
+    ///
+    /// // Set up generic cookie type
+    /// #[cookie(name = "my-cookie")]
+    /// pub struct MyCookie;
+    ///
+    /// impl OutgoingConfig for MyCookie {
+    ///     type Insert = String;
+    /// }
+    ///  
+    /// // Use macro to implement `FromRequest` for cookie collection struct
+    /// #[derive(FromRequest)]
+    /// pub struct CookieCollection<'c>(Cookie<'c, MyCookie>);
+    ///
+    /// async fn discard_cookie(cookie: CookieCollection<'_>) -> HttpResponse {
+    ///     cookie.0.insert("Stephanie".to_string());
+    ///     cookie.0.discard();
+    ///     HttpResponse::Ok().finish()
+    /// }
+    /// ```
+    pub fn discard(&self) {
+        let discard_id = ResponseCookieId::new(T::COOKIE_NAME);
+
+        let attributes = match &self.attributes {
+            Some(attributes) => attributes,
+            None => &T::attributes(),
+        };
+
+        // This sets the path and domain only
+        let discard_id = discard_id.set_attributes(attributes);
+
+        self.storage
+            .response_storage
+            .borrow_mut()
+            .discard(discard_id);
     }
 }
 
@@ -305,6 +348,7 @@ mod tests {
     pub struct TypeD;
 
     #[derive(Deserialize, Serialize, Debug, PartialEq)]
+    #[derive(Clone)]
     pub struct GetType {
         name: String,
     }
@@ -522,6 +566,56 @@ mod tests {
         );
     }
     #[test]
+    fn double_insert_cookie_with_custom_attributes_should_not_change_attributes_values() {
+        // Set up
+        // Initialize storage
+        let storage = Storage::new();
+        let outgoing_cookie = ResponseCookie::new("type_c", r#"{ "name": "some value" }"#);
+        // The id determined by name path and domain
+        let outgoing_cookie_id = outgoing_cookie
+            .id()
+            .set_path("/some-path")
+            .set_domain("..example.com");
+        let get_type_value = GetType {
+            name: "some value".to_string(),
+        };
+
+        // Expiration cookie set up
+        let date = date(2024, 1, 15)
+        .at(0,0,0, 0)
+        .to_zoned(TimeZone::UTC)
+        .unwrap();
+
+        // Use generic type parameter to create a cookie instance
+        let cookie = Cookie::<TypeC>::new(&storage);
+
+        cookie.insert(get_type_value.clone());
+        cookie.insert(get_type_value);
+
+        let binding = storage.response_storage.borrow();
+        let response_cookie = binding.get(outgoing_cookie_id);
+
+        assert_eq!(response_cookie.is_some(), true);
+        assert_eq!(
+            response_cookie.unwrap().name_value(),
+            ("type_c", r#"{"name":"some value"}"#)
+        );
+        assert_eq!(response_cookie.unwrap().path(), Some("/some-path"));
+        assert_eq!(response_cookie.unwrap().domain(), Some(".example.com"));
+        assert_eq!(response_cookie.unwrap().same_site(), Some(SameSite::Lax));
+        assert_eq!(response_cookie.unwrap().http_only(), Some(true));
+        assert_eq!(response_cookie.unwrap().secure(), Some(true));
+        assert_eq!(response_cookie.unwrap().partitioned(), Some(true));
+        assert_eq!(
+            response_cookie.unwrap().expires(),
+            Some(&Expiration::from(date))
+        );
+        assert_eq!(
+            response_cookie.unwrap().max_age(),
+            Some(SignedDuration::from_hours(10))
+        );
+    }
+    #[test]
     fn insert_cookie_with_permanent() {
         // Set up
         // Initialize storage
@@ -573,5 +667,24 @@ mod tests {
         assert!(
             response_cookie.unwrap().expires().unwrap().datetime().unwrap() < Zoned::now()
         );
+    }
+    #[test]
+    fn discard_cookie() {
+        // Set up
+        // Initialize storage
+        let storage = Storage::new();
+        let outgoing_cookie = ResponseCookie::new("type_b", r#"{ "name": "some value is 32" }"#);
+        // The id determined by name path and domain
+        let outgoing_cookie_id = outgoing_cookie.id().set_path("/");
+
+        // Use generic type parameter to create a cookie instance
+        let cookie = Cookie::<TypeB>::new(&storage);
+        
+        cookie.discard();
+
+        let binding = storage.response_storage.borrow();
+        let response_cookie = binding.get(outgoing_cookie_id);
+
+        assert_eq!(response_cookie.is_some(), false);
     }
 }
