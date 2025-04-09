@@ -1,11 +1,11 @@
-use actix_utils::future::{ready, Ready};
+use actix_utils::future::{Ready, ready};
 use actix_web::{
-    dev::{forward_ready, ResponseHead, Service, ServiceRequest, ServiceResponse, Transform},
-    http::header::{HeaderValue, SET_COOKIE},
     HttpMessage, HttpResponse,
+    dev::{ResponseHead, Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
+    http::header::{HeaderValue, SET_COOKIE},
 };
 use anyhow::anyhow;
-use biscotti::{errors::ProcessIncomingError, Processor, RequestCookie};
+use biscotti::{Processor, RequestCookie, errors::ProcessIncomingError};
 use std::{future::Future, pin::Pin, rc::Rc};
 
 use crate::Storage;

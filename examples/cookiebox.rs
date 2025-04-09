@@ -1,11 +1,11 @@
-use actix_web::{get, App, HttpMessage, HttpResponse, HttpServer};
-use cookiebox::cookiebox_macros::{cookie, FromRequest};
+use actix_web::{App, HttpMessage, HttpResponse, HttpServer, get};
+use cookiebox::cookiebox_macros::{FromRequest, cookie};
 use cookiebox::cookies::{Cookie, CookieName, IncomingConfig, OutgoingConfig};
-use cookiebox::{
-    config::{CryptoAlgorithm, CryptoRule},
-    CookieMiddleware, Key, Processor, ProcessorConfig,
-};
 use cookiebox::{Attributes, SameSite};
+use cookiebox::{
+    CookieMiddleware, Key, Processor, ProcessorConfig,
+    config::{CryptoAlgorithm, CryptoRule},
+};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -68,7 +68,7 @@ impl IncomingConfig for CookieA {
     type Get = String;
 }
 impl OutgoingConfig for CookieA {
-   type Insert = String; 
+    type Insert = String;
 }
 // Cookie B
 // This generic type parameter would give Cookie type get, get_all, insert, and remove.
@@ -144,9 +144,7 @@ async fn remove_cookie_b(cookies_collection: CookieCollection<'_>) -> HttpRespon
 //Add a new cookie in the browser with the value `%22STRING%22` and set the attributes to default values to get
 #[get("add_cookie_a")]
 async fn add_cookie_a(cookies_collection: CookieCollection<'_>) -> HttpResponse {
-    cookies_collection
-        .cookie_a
-        .insert("Cookie A".to_string());
+    cookies_collection.cookie_a.insert("Cookie A".to_string());
 
     HttpResponse::Ok().body("__cookie-a added")
 }

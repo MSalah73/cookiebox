@@ -1,5 +1,5 @@
-use actix_web::{test, web, App, HttpMessage, HttpResponse};
-use cookiebox::cookiebox_macros::{cookie, FromRequest};
+use actix_web::{App, HttpMessage, HttpResponse, test, web};
+use cookiebox::cookiebox_macros::{FromRequest, cookie};
 use cookiebox::cookies::{Cookie, CookieName, IncomingConfig, OutgoingConfig};
 use cookiebox::{Attributes, CookieMiddleware, Processor, ProcessorConfig, SameSite};
 

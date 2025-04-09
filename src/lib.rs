@@ -85,7 +85,7 @@ mod middleware;
 mod storage;
 
 pub use attributes::Attributes;
-pub use biscotti::{config, time, Expiration, Key, Processor, ProcessorConfig, SameSite};
+pub use biscotti::{Expiration, Key, Processor, ProcessorConfig, SameSite, config, time};
 pub use cookiebox_macros;
 pub use middleware::CookieMiddleware;
 pub use storage::Storage;

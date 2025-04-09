@@ -1,4 +1,4 @@
-use biscotti::{time::SignedDuration, Expiration};
+use biscotti::{Expiration, time::SignedDuration};
 use biscotti::{RemovalCookie, ResponseCookie, ResponseCookieId, SameSite};
 use std::borrow::Cow;
 
@@ -19,7 +19,7 @@ use std::borrow::Cow;
 ///     type Insert = String;
 ///
 ///     fn attributes<'c>() -> Attributes<'c> {
-/// 
+///
 ///         let date = date(2024, 1, 15)
 ///             .at(0,0,0, 0)
 ///             .to_zoned(TimeZone::UTC)

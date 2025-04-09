@@ -2,9 +2,9 @@
 use crate::attributes::{Attributes, AttributesSetter};
 use crate::storage::Storage;
 use biscotti::{RemovalCookie, ResponseCookie, ResponseCookieId};
-use serde::de::DeserializeOwned;
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde::de::DeserializeOwned;
+use serde_json::{Value, json};
 use std::any::type_name;
 use thiserror::Error;
 
@@ -131,7 +131,7 @@ impl<T: IncomingConfig> Cookie<'_, T> {
 }
 
 /// Provide methods to `insert` and `remove` a cookie instance for any generic type parameter that implements [OutgoingConfig]
-impl<'c, T: OutgoingConfig> Cookie<'c, T> {
+impl<T: OutgoingConfig> Cookie<'_, T> {
     /// Add a cookie to the [Storage] response collection which later attached to the HTTP response using the `Set-Cookie` header.
     ///
     /// # Example
@@ -347,8 +347,7 @@ mod tests {
     #[cookie(name = "type_d")]
     pub struct TypeD;
 
-    #[derive(Deserialize, Serialize, Debug, PartialEq)]
-    #[derive(Clone)]
+    #[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
     pub struct GetType {
         name: String,
     }
@@ -382,7 +381,7 @@ mod tests {
         fn attributes<'c>() -> Attributes<'c> {
             // Expiration has an internal From impl for Into<Option<Zoned>
             let date = date(2024, 1, 15)
-                .at(0,0,0, 0)
+                .at(0, 0, 0, 0)
                 .to_zoned(TimeZone::UTC)
                 .unwrap();
 
@@ -533,9 +532,9 @@ mod tests {
 
         // Expiration cookie set up
         let date = date(2024, 1, 15)
-        .at(0,0,0, 0)
-        .to_zoned(TimeZone::UTC)
-        .unwrap();
+            .at(0, 0, 0, 0)
+            .to_zoned(TimeZone::UTC)
+            .unwrap();
 
         // Use generic type parameter to create a cookie instance
         let cookie = Cookie::<TypeC>::new(&storage);
@@ -582,9 +581,9 @@ mod tests {
 
         // Expiration cookie set up
         let date = date(2024, 1, 15)
-        .at(0,0,0, 0)
-        .to_zoned(TimeZone::UTC)
-        .unwrap();
+            .at(0, 0, 0, 0)
+            .to_zoned(TimeZone::UTC)
+            .unwrap();
 
         // Use generic type parameter to create a cookie instance
         let cookie = Cookie::<TypeC>::new(&storage);
@@ -665,7 +664,13 @@ mod tests {
         assert_eq!(response_cookie.is_some(), true);
         assert_eq!(response_cookie.unwrap().name_value(), ("type_b", ""));
         assert!(
-            response_cookie.unwrap().expires().unwrap().datetime().unwrap() < Zoned::now()
+            response_cookie
+                .unwrap()
+                .expires()
+                .unwrap()
+                .datetime()
+                .unwrap()
+                < Zoned::now()
         );
     }
     #[test]
@@ -679,7 +684,7 @@ mod tests {
 
         // Use generic type parameter to create a cookie instance
         let cookie = Cookie::<TypeB>::new(&storage);
-        
+
         cookie.discard();
 
         let binding = storage.response_storage.borrow();
