@@ -11,7 +11,7 @@ use serde_json::json;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // Set up the proccesor for the middleware
+    // Set up the processor for the middleware
     let mut cookie_config = ProcessorConfig::default();
 
     // Set up the rules encrypted cookies
@@ -28,9 +28,14 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
-            // The middleware handles the extraction and traformation the cookies from the request handler
+            // The middleware handles the extraction and transformation the cookies from the request handler
             .wrap(CookieMiddleware::new(processor.clone()))
+            // Cookie A handlers
             .service(get_cookie_a)
+            .service(add_cookie_a)
+            .service(update_cookie_a)
+            .service(remove_cookie_a)
+            // Cookie B handlers
             .service(get_cookie_b)
             .service(add_cookie_b)
             .service(update_cookie_b)
@@ -50,15 +55,20 @@ pub struct CookieData {
 //Define cookies
 #[cookie(name = "__cookie-a")]
 pub struct CookieA;
+
 #[cookie(name = "__cookie-b")]
 pub struct CookieB;
 
 // Cookie type configuration
 //
 // Cookie A
-// This generic type parameter would give Cookie type get and get_all
+// This generic type parameter would give Cookie type get, get_all, insert, and remove with default attributes and serialization.
+// Check Attribute::default for reference
 impl IncomingConfig for CookieA {
     type Get = String;
+}
+impl OutgoingConfig for CookieA {
+   type Insert = String; 
 }
 // Cookie B
 // This generic type parameter would give Cookie type get, get_all, insert, and remove.
@@ -94,7 +104,6 @@ async fn add_cookie_b(cookies_collection: CookieCollection<'_>) -> HttpResponse 
 
     HttpResponse::Ok().body("Encrypted cookie added")
 }
-
 #[get("get_cookie_b")]
 async fn get_cookie_b(cookies_collection: CookieCollection<'_>) -> HttpResponse {
     // This returns a Ok(CookieData) if found, otherwise Err(CookieBoxError)
@@ -131,8 +140,17 @@ async fn remove_cookie_b(cookies_collection: CookieCollection<'_>) -> HttpRespon
 
     HttpResponse::Ok().body("__cookie-b removed")
 }
-// Add a new cookie in the browser with the value `%22STRING%22` and set the attributes to defualt values to get
-// this cookie - Check the Attribute::default
+
+//Add a new cookie in the browser with the value `%22STRING%22` and set the attributes to default values to get
+#[get("add_cookie_a")]
+async fn add_cookie_a(cookies_collection: CookieCollection<'_>) -> HttpResponse {
+    cookies_collection
+        .cookie_a
+        .insert("Cookie A".to_string());
+
+    HttpResponse::Ok().body("__cookie-a added")
+}
+// Add a new cookie in the browser with the value `%22STRING%22` and set the attributes to default values to get
 #[get("get_cookie_a")]
 async fn get_cookie_a(cookies_collection: CookieCollection<'_>) -> HttpResponse {
     // This returns a Ok(String) if found, otherwise Err(CookieBoxError)
@@ -142,4 +160,30 @@ async fn get_cookie_a(cookies_collection: CookieCollection<'_>) -> HttpResponse 
         .map_err(|e| eprint!("Unable to get cookie data - {e}"));
 
     HttpResponse::Ok().body(format!("{:?}", data))
+}
+
+#[get("update_cookie_a")]
+async fn update_cookie_a(cookies_collection: CookieCollection<'_>) -> HttpResponse {
+    // This returns a Ok(CookieData) if found, otherwise Err(CookieBoxError)
+    let old_data = cookies_collection
+        .cookie_a
+        .get()
+        .map_err(|e| eprint!("Unable to get cookie data - {e}"));
+
+    // Since the path, domain, and name are the same, this would replace the current data with the below
+    cookies_collection
+        .cookie_a
+        .insert("New cookie A value".to_string());
+
+    HttpResponse::Ok().body(format!(
+        "old data: {:?} - Go to get_cookie_a to check the new value",
+        old_data
+    ))
+}
+
+#[get("remove_cookie_a")]
+async fn remove_cookie_a(cookies_collection: CookieCollection<'_>) -> HttpResponse {
+    cookies_collection.cookie_a.remove();
+
+    HttpResponse::Ok().body("__cookie-a removed")
 }
